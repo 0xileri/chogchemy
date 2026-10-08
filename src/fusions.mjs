@@ -1,6 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { verifyMessage } from 'viem';
 import { collection } from './chain.mjs';
+import { loadArtDirection, digest, imageMime } from './art-direction.mjs';
+import { loadParentReference } from './reference-assets.mjs';
 
 export class FusionError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -13,6 +15,8 @@ export function approvalMessage(record, owner) {
     '', `App: ${record.origin}`, `Request ID: ${record.id}`, `Chain ID: ${record.chainId}`, `Collection: ${record.collection}`,
     ...record.parents.map((parent, index) => `Parent ${index === 0 ? 'A' : 'B'}: token ${parent.tokenId} · holder ${parent.owner}`),
     `Approving holder: ${owner}`, `Art direction: ${record.artDirection}`,
+    ...(record.artDirectionHash ? [`Style SHA-256: ${record.artDirectionHash}`] : []),
+    ...(record.artDirectionSnapshot ? ['Style rules:', ...record.artDirectionSnapshot.rules.map(rule => `• ${rule}`), `Artist reference images: ${record.artDirectionSnapshot.references.length}`] : []),
     `Created: ${new Date(record.createdAt).toISOString()}`, `Expires: ${new Date(record.expires).toISOString()}`,
     '', 'I authorize Chogchemy to use the two listed Chogs as visual references for one AI-generated character and record its ancestry, after both listed holders approve.',
     'This permission is limited to this request and art direction. It can be cancelled before generation and becomes invalid if a parent changes ownership or the request expires.',
@@ -20,7 +24,15 @@ export function approvalMessage(record, owner) {
   ].join('\n');
 }
 
-export function createFusionService({ store, chain, origin, now = Date.now }) {
+export function createFusionService({ store, chain, origin, now = Date.now, imageGenerator = null, artDirection = loadArtDirection(), loadReference = loadParentReference, dailyLimit = 10, holderDailyLimit = 2, concurrency = 2 }) {
+  for (const value of [dailyLimit, holderDailyLimit, concurrency]) if (!Number.isSafeInteger(value) || value < 1) throw new Error('Generation limits must be positive integers.');
+  const jobs = new Set();
+  // A provider may have charged a request interrupted by a process restart. Never retry it automatically.
+  for (const record of store.all()) {
+    if (record.origin !== origin) continue;
+    if (record.state === 'preparing') { record.state = 'approved'; record.generation = { error: 'Preparation was interrupted. You can try again.' }; store.put(record); }
+    if (record.state === 'generating') { record.state = 'generation_failed'; record.generation.error = 'Generation was interrupted. The provider may have charged this attempt; it will not be retried.'; store.put(record); }
+  }
   // Serialize mutations in this server process, including checks that await the RPC.
   let queue = Promise.resolve();
   function serial(work) { const result = queue.then(work); queue = result.catch(() => {}); return result; }
@@ -28,7 +40,7 @@ export function createFusionService({ store, chain, origin, now = Date.now }) {
     if (typeof id !== 'string' || !/^[a-f0-9]{64}$/.test(id)) fail(404, 'Fusion invitation not found.');
     const record = store.get(id);
     if (!record || record.origin !== origin || record.collection !== collection.address || record.chainId !== collection.chainId) fail(404, 'Fusion invitation not found.');
-    if (record.expires <= now() && ['awaiting_approvals', 'approved'].includes(record.state)) { record.state = 'expired'; store.put(record); }
+    if (record.expires <= now() && ['awaiting_approvals', 'approved', 'preparing'].includes(record.state)) { record.state = 'expired'; store.put(record); }
     return record;
   }
   function participant(record, address) {
@@ -60,10 +72,77 @@ export function createFusionService({ store, chain, origin, now = Date.now }) {
       artDirection: record.artDirection, collection: { address: record.collection, chainId: record.chainId },
       invitationUrl: `${record.origin}/?fusion=${record.id}#fusion`,
       yourRole: address ? record.parents.findIndex(p => p.owner === address) : -1,
-      generationAvailable: false,
+      generationAvailable: Boolean(imageGenerator?.configured && record.artDirectionHash === artDirection.hash && record.state === 'approved'),
+      generation: record.generation ? { error: record.generation.error || null, startedAt: record.generation.providerStartedAt || null } : null,
+      artwork: record.artwork ? { ...record.artwork, url: `/artwork/${record.id}.png` } : null,
+      artDirectionHash: record.artDirectionHash || null,
     };
   }
+  function checkQuota(record, checkConcurrency = true) {
+    const records = store.all().filter(r => r.origin === origin);
+    if (checkConcurrency && records.filter(r => r.id !== record.id && ['preparing', 'generating'].includes(r.state)).length >= concurrency) fail(429, 'The studio is busy. Try again after another fusion finishes.');
+    const day = Math.floor(now() / 86400000) * 86400000;
+    const attempts = records.filter(r => r.generation?.providerStartedAt >= day);
+    if (attempts.length >= dailyLimit || record.parents.some(p => attempts.filter(r => r.parents.some(parent => parent.owner === p.owner)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
+  }
+  async function runGeneration(id) {
+    let dispatched = false;
+    try {
+      const initial = getRecord(id);
+      const parents = await Promise.all(initial.parents.map(p => loadReference(chain, p.tokenId)));
+      const dispatch = await serial(async () => {
+        const record = getRecord(id);
+        if (record.state !== 'preparing') return false;
+        if (record.artDirectionHash !== artDirection.hash) fail(409, 'The art direction changed. Create a new invitation.');
+        for (const parent of record.parents) {
+          if (!parent.approval || !await verifyMessage({ address: parent.owner, message: approvalMessage(record, parent.owner), signature: parent.approval.signature })) fail(403, 'Both valid holder approvals are required.');
+        }
+        await validate(record);
+        checkQuota(record, false);
+        record.state = 'generating';
+        record.generation = { providerStartedAt: now(), mode: imageGenerator.mode, model: imageGenerator.model };
+        record.references = parents.map(({ bytes, ...reference }) => reference);
+        store.put(record); return true;
+      });
+      if (!dispatch) return;
+      dispatched = true;
+      const result = await imageGenerator.generate({ parents, artDirection });
+      if (!result.bytes?.length || result.bytes.length > 25 * 1024 * 1024 || imageMime(result.bytes) !== 'image/png') throw new Error('Invalid image output');
+      await serial(() => {
+        const record = getRecord(id);
+        record.state = 'generated';
+        record.artwork = { digest: digest(result.bytes), createdAt: now(), model: result.model, mode: result.mode };
+        record.generation.providerRequestId = result.providerRequestId || null;
+        store.complete(record, result.bytes);
+      });
+    } catch (error) {
+      await serial(() => {
+        const record = getRecord(id);
+        if (!['preparing', 'generating'].includes(record.state)) return;
+        record.state = dispatched ? 'generation_failed' : 'approved';
+        record.generation = { ...record.generation, error: dispatched ? 'The image provider did not return a saved result. This attempt will not be retried because it may have been charged.' : error.publicMessage || (error instanceof FusionError ? error.message : 'Could not prepare the parent artwork. Retry before generation starts.') };
+        store.put(record);
+      });
+    }
+  }
   return {
+    idle() { return Promise.all([...jobs]); },
+    gallery() { return store.all().filter(r => r.origin === origin && r.state === 'generated').sort((a, b) => b.artwork.createdAt - a.artwork.createdAt).slice(0, 24).map(r => view(r)); },
+    artwork(id) { const record = getRecord(id); if (record.state !== 'generated') fail(404, 'Artwork not found.'); return store.artwork(id); },
+    generate(id, address) { return serial(async () => {
+      const record = getRecord(id); participant(record, address);
+      if (['generated', 'generating', 'preparing'].includes(record.state)) return view(record, address);
+      if (!imageGenerator?.configured) fail(503, 'The artwork studio is not available yet. Your approvals are saved.');
+      if (record.state !== 'approved') fail(409, 'Both holders must approve this invitation before generation.');
+      if (record.artDirectionHash !== artDirection.hash) fail(409, 'This invitation uses an older art direction. Create a new invitation before generating.');
+      checkQuota(record);
+      await validate(record);
+      record.state = 'preparing'; record.generation = { requestedAt: now() }; store.put(record);
+      // Run outside the mutation queue so holders can cancel while references load.
+      const job = Promise.resolve().then(() => runGeneration(id)); jobs.add(job);
+      job.finally(() => jobs.delete(job)).catch(() => {});
+      return view(record, address);
+    }); },
     list(address) { return store.list(address).filter(r => r.origin === origin).map(r => view(getRecord(r.id), address)); },
     get(id, address) { return view(getRecord(id), address); },
     create(address, input) { return serial(async () => {
@@ -77,7 +156,8 @@ export function createFusionService({ store, chain, origin, now = Date.now }) {
       const createdAt = now();
       const record = {
         id: randomBytes(32).toString('hex'), state: 'awaiting_approvals', createdBy: address, origin,
-        chainId: collection.chainId, collection: collection.address, artDirection: 'chogchemy-artist-v1',
+        chainId: collection.chainId, collection: collection.address, artDirection: artDirection.label,
+        artDirectionHash: artDirection.hash, artDirectionSnapshot: { ...artDirection, images: undefined },
         parents: [{ tokenId: input.parentA, owner: ownerA, approval: null }, { tokenId: input.parentB, owner: ownerB, approval: null }],
         createdAt, expires: createdAt + 24 * 60 * 60 * 1000, checkedAt: createdAt, checkedBlock: String(snapshot.blockNumber),
       };
@@ -105,7 +185,8 @@ export function createFusionService({ store, chain, origin, now = Date.now }) {
       await validate(record); store.put(record); return view(record, address);
     }); },
     cancel(id, address) { return serial(async () => {
-      const record = getRecord(id); participant(record, address); open(record);
+      const record = getRecord(id); participant(record, address);
+      if (record.state !== 'preparing') open(record);
       record.state = 'cancelled'; record.cancelledAt = now(); record.cancelledBy = address;
       store.put(record); return view(record, address);
     }); },

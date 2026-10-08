@@ -1,7 +1,7 @@
 import { api, getWalletAddress, signWalletMessage } from './wallet.js';
 
 const $ = id => document.getElementById(id);
-let current = null, message = null, operation = 0, busy = false;
+let current = null, message = null, operation = 0, busy = false, poll = null;
 const status = text => { $('fusion-status').textContent = text; };
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const active = request => ['awaiting_approvals', 'approved'].includes(request.state) && request.expires > Date.now();
@@ -19,11 +19,14 @@ function controls() {
   $('sign-fusion').disabled = busy || !$('approval-confirm').checked || !message || !address;
   $('wallet-hint').hidden = !!address;
   $('my-invitations').hidden = !address;
+  $('generate-artwork').hidden = !current?.generationAvailable || role < 0;
+  $('generate-artwork').disabled = busy;
+  if (current?.state === 'preparing' && role >= 0) $('cancel-invitation').hidden = false;
 }
 function render(request) {
   current = request; resetMessage(); $('invitation-card').hidden = false;
   $('invitation-link').value = request.invitationUrl;
-  $('invitation-state').textContent = ({ awaiting_approvals: 'Waiting for both holders', approved: 'Both holders approved', cancelled: 'Cancelled', invalidated: 'Ownership changed', expired: 'Expired' })[request.state] || request.state;
+  $('invitation-state').textContent = ({ awaiting_approvals: 'Waiting for both holders', approved: 'Both holders approved', preparing: 'Preparing parent artwork', generating: 'Creating your new character…', generated: 'Meet your new character.', generation_failed: 'Artwork could not be saved', cancelled: 'Cancelled', invalidated: 'Ownership changed', expired: 'Expired' })[request.state] || request.state;
   $('invitation-parents').replaceChildren();
   for (const [index, parent] of request.parents.entries()) {
     const card = document.createElement('article');
@@ -37,6 +40,18 @@ function render(request) {
   $('invitation-expiry').textContent = `Expires ${new Date(request.expires).toLocaleString()} · Art direction ${request.artDirection}`;
   $('ownership-check').textContent = `Ownership last checked ${new Date(request.checkedAt).toLocaleString()} at Monad block ${request.checkedBlock}.`;
   $('ready-note').hidden = request.state !== 'approved';
+  $('ready-note').textContent = request.generation?.error || (request.generationAvailable ? 'Both holders approved. Create one character using these two Chogs. Ownership is checked again before the studio begins.' : 'Your approvals are saved. The artwork studio is not available for this invitation yet.');
+  $('generation-note').hidden = !['preparing', 'generating', 'generation_failed'].includes(request.state);
+  $('generation-note').textContent = request.generation?.error || (request.state === 'preparing' ? 'Loading the two parent images. Either holder can still cancel during preparation.' : 'The studio is drawing. This can take a few minutes; you can leave and return to this link.');
+  $('generated-result').hidden = !request.artwork;
+  if (request.artwork) {
+    $('generated-image').src = request.artwork.url;
+    $('download-artwork').href = request.artwork.url;
+    $('artwork-caption').textContent = `${request.artwork.mode === 'fixture' ? 'TEST ARTWORK · Synthetic output' : 'AI character artwork'} · Parents #${request.parents.map(p => p.tokenId).join(' + #')} · ${request.artDirection}. An artwork record; no NFT has been minted.`;
+    void gallery();
+  }
+  clearTimeout(poll);
+  if (['preparing', 'generating'].includes(request.state)) poll = setTimeout(() => { if (!document.hidden && !busy && current?.id === request.id) void load(request.id); else if (current?.id === request.id) render(current); }, 5000);
   const address = getWalletAddress();
   $('invitation-role').textContent = !address ? 'Connect the wallet holding either parent to review and sign.' : request.parents.some(p => p.owner === address) ? 'This wallet is one of the two invited holders.' : 'This wallet is not one of the invited holders. Switch to the wallet holding a listed parent.';
   controls();
@@ -49,7 +64,7 @@ async function load(id, updateUrl = false) {
     if (attempt !== operation) return;
     render(request);
     if (updateUrl) { const url = new URL(location.href); url.searchParams.set('fusion', request.id); url.hash = 'fusion'; history.replaceState(null, '', url); }
-    status(request.state === 'approved' ? 'Both signatures are saved. AI artwork generation is the next milestone.' : 'Invitation loaded. Review the parents and approval status below.');
+    status(request.state === 'approved' ? 'Both signatures are saved. Review the studio options below.' : 'Invitation loaded. Review the parents and status below.');
   } catch (error) { if (attempt === operation) { current = null; $('invitation-card').hidden = true; status(error.message); controls(); } }
 }
 async function listMine() {
@@ -114,7 +129,7 @@ $('sign-fusion').addEventListener('click', () => void perform(async () => {
   if (attempt !== operation || getWalletAddress() !== expectedAddress) throw new Error('Wallet or invitation changed. Review again.');
   const request = await api(`/api/fusions/${id}/approve`, { signature });
   if (attempt !== operation) return;
-  render(request); status(request.state === 'approved' ? 'Both holders approved. This request is ready for the upcoming AI generation step.' : 'Your signature is saved. Waiting for the other holder.');
+  render(request); status(request.state === 'approved' ? 'Both holders approved. Your character is ready to create.' : 'Your signature is saved. Waiting for the other holder.');
   await listMine();
 }));
 $('cancel-invitation').addEventListener('click', () => void perform(async () => {
@@ -132,6 +147,27 @@ $('recheck-invitation').addEventListener('click', () => void perform(async () =>
   } catch (error) { if (attempt === operation) { await load(id); status(error.message); } }
 }));
 $('refresh-invitation').addEventListener('click', () => { if (!busy && current) void load(current.id); });
+$('generate-artwork').addEventListener('click', () => void perform(async () => {
+  const id = current?.id, attempt = operation; if (!id) return;
+  status('Checking consent and both owners before preparing the artwork…');
+  const request = await api(`/api/fusions/${id}/generate`, {});
+  if (attempt !== operation || current?.id !== id) return;
+  render(request); status('Your fusion is underway. This page will update as it progresses.');
+}));
+async function gallery() {
+  try {
+    const data = await api('/api/gallery');
+    $('live-gallery').replaceChildren();
+    for (const request of data.artworks) {
+      const card = document.createElement('a'); card.className = 'gallery-card'; card.href = request.invitationUrl;
+      const image = document.createElement('img'); image.src = request.artwork.url; image.loading = 'lazy'; image.alt = `Character from Chogs ${request.parents.map(p => p.tokenId).join(' and ')}`;
+      const label = document.createElement('p'); label.textContent = `${request.artwork.mode === 'fixture' ? 'TEST · ' : ''}#${request.parents[0].tokenId} + #${request.parents[1].tokenId}`;
+      card.append(image, label); $('live-gallery').append(card);
+    }
+    if (!data.artworks.length) $('live-gallery').textContent = 'The first holder-approved characters will appear here.';
+  } catch { $('live-gallery').textContent = 'The gallery is temporarily unavailable.'; }
+}
+void gallery();
 $('copy-invitation').addEventListener('click', async () => {
   if (!current) return;
   try { await navigator.clipboard.writeText(current.invitationUrl); status('Invitation link copied.'); }

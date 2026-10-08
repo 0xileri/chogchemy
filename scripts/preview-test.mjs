@@ -14,8 +14,12 @@ const chain = {
   async ownedTokenIds(address) { return [ids[accounts.findIndex(a => a.address.toLowerCase() === address)]]; },
   async token(id) { return { owner: (await this.owners([id])).owners[0], tokenURI: 'data:application/json,' + encodeURIComponent(JSON.stringify({ name: `Test Chog #${id}`, attributes: [{ trait_type: 'Fixture', value: 'Synthetic NFT for browser tests' }] })) }; },
 };
-const app = createApplication({ chain, origin });
-const html = (await readFile(new URL('../public/index.html', import.meta.url), 'utf8')).replace('<body>', `<body><aside style="padding:16px;background:#ffe7a0;color:#302600;position:sticky;top:0;z-index:10">LOCAL TEST FIXTURE · Synthetic wallets and NFTs only. <button id="test-a">Test wallet A</button> <button id="test-b">Test wallet B</button> <span id="test-account">Wallet A selected</span></aside><script>
+const fixturePng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5H0AAAAASUVORK5CYII=', 'base64');
+const app = createApplication({ chain, origin, generationOptions: {
+  loadReference: async (_, tokenId) => ({ tokenId, bytes: fixturePng, mime: 'image/png', name: 'Synthetic parent', traits: [] }),
+  imageGenerator: { configured: true, mode: 'fixture', model: 'synthetic-test', async generate() { return { bytes: fixturePng, mode: 'fixture', model: 'synthetic-test' }; } },
+} });
+const html = (await readFile(new URL('../public/index.html', import.meta.url), 'utf8')).replace('<body>', `<body><aside style="padding:16px;background:#ffe7a0;color:#302600;position:relative">LOCAL TEST FIXTURE · Synthetic wallets and NFTs only. <button id="test-a">Test wallet A</button> <button id="test-b">Test wallet B</button> <span id="test-account">Wallet A selected</span></aside><script>
 let slot = 0; const accounts = ${JSON.stringify(accounts.map(a => a.address))}; const listeners = new Map();
 window.ethereum = {
   async request({ method, params }) {

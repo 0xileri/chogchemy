@@ -12,10 +12,10 @@ const staticFiles = {
 const tokenPattern = /^(0|[1-9][0-9]{0,77})$/;
 export function validTokenId(value) { return typeof value === 'string' && tokenPattern.test(value) && BigInt(value) < 2n ** 256n; }
 
-export function createApplication({ chain = createChain(), fusionStore = createMemoryFusionStore(), origin = process.env.APP_ORIGIN || `http://localhost:${process.env.PORT || 3000}`, now = Date.now } = {}) {
+export function createApplication({ chain = createChain(), fusionStore = createMemoryFusionStore(), origin = process.env.APP_ORIGIN || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`, now = Date.now, generationOptions = {} } = {}) {
   const challenges = new Map(), sessions = new Map(), limits = new Map();
   const appOrigin = new URL(origin).origin;
-  const fusions = createFusionService({ store: fusionStore, chain, origin: appOrigin, now });
+  const fusions = createFusionService({ ...generationOptions, store: fusionStore, chain, origin: appOrigin, now });
   const secure = appOrigin.startsWith('https:') ? '; Secure' : '';
   const cookie = (value, age = 1800) => `chogchemy_session=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${age}${secure}`;
   const send = (res, status, body) => {
@@ -35,9 +35,17 @@ export function createApplication({ chain = createChain(), fusionStore = createM
     for await (const chunk of req) { bytes += chunk.length; if (bytes > 4096) throw new Error('Request too large.'); chunks.push(chunk); }
     try { return JSON.parse(Buffer.concat(chunks).toString()); } catch { throw new Error('Invalid JSON.'); }
   }
-  return async (req, res) => {
+  const handler = async (req, res) => {
     try {
       const url = new URL(req.url, appOrigin);
+      if (url.pathname === '/healthz' && req.method === 'GET') { send(res, 200, { ok: true }); return; }
+      const artworkRoute = url.pathname.match(/^\/artwork\/([a-f0-9]{64})\.png$/);
+      if (artworkRoute && ['GET', 'HEAD'].includes(req.method)) {
+        const bytes = fusions.artwork(artworkRoute[1]);
+        if (!bytes) { send(res, 404, { error: 'Artwork not found.' }); return; }
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': bytes.length, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
+        res.end(req.method === 'HEAD' ? undefined : bytes); return;
+      }
       if (!url.pathname.startsWith('/api/')) {
         const file = Object.hasOwn(staticFiles, url.pathname) ? staticFiles[url.pathname] : null;
         if (!file || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(404); res.end('Not found'); return; }
@@ -78,7 +86,8 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         const id = randomBytes(32).toString('hex'); sessions.set(id, { address: challenge.address, expires: now() + 1800000 });
         res.setHeader('Set-Cookie', cookie(id)); send(res, 200, { address: challenge.address }); return;
       }
-      const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel))?$/);
+      if (req.method === 'GET' && url.pathname === '/api/gallery') { send(res, 200, { artworks: fusions.gallery() }); return; }
+      const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate))?$/);
       if (req.method === 'GET' && fusionRoute && !fusionRoute[2]) { send(res, 200, fusions.get(fusionRoute[1], session?.address)); return; }
       if (!session) { send(res, 401, { error: 'Connect and verify your wallet first.' }); return; }
       if (url.pathname === '/api/fusions' && req.method === 'GET') { send(res, 200, { requests: fusions.list(session.address) }); return; }
@@ -89,6 +98,7 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         if (action === 'approve') { const input = await body(req); send(res, 200, await fusions.approve(id, session.address, input?.signature)); return; }
         if (action === 'recheck') { send(res, 200, await fusions.recheck(id, session.address)); return; }
         if (action === 'cancel') { send(res, 200, await fusions.cancel(id, session.address)); return; }
+        if (action === 'generate') { send(res, 202, await fusions.generate(id, session.address)); return; }
       }
       if (req.method === 'GET' && url.pathname === '/api/chogs') {
         try {
@@ -115,4 +125,6 @@ export function createApplication({ chain = createChain(), fusionStore = createM
       send(res, error.message === 'Invalid JSON.' || error.message === 'Request too large.' ? 400 : 500, { error: ['Invalid JSON.', 'Request too large.'].includes(error.message) ? error.message : 'Something went wrong. Please retry.' });
     }
   };
+  handler.idle = () => fusions.idle();
+  return handler;
 }

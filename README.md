@@ -1,74 +1,72 @@
 # Chogchemy
 
-Two Chogs. Something unexpected.
+Two Chog holders create one new character, with signed consent, artist style references, and ancestry linked to their original NFTs. Built for Chogathon.
 
-Chogchemy is a Chogathon project where two verified holders authorize an artist-guided AI character fusion with ancestry linked to the original NFTs.
+## Run locally
 
-## Run
+Use Node 24 (minimum 22.13) for native SQLite support.
 
-Requires Node.js 22.13 or newer (Node 24 recommended). The live wallet feature uses viem and the public Monad RPC. No API keys are needed.
-
-```sh
+```powershell
+cd "C:\Users\HP\orbio build\chogchemy"
 npm.cmd install
 npm.cmd run dev
 ```
 
-Open http://localhost:3000. Run `npm.cmd run check` for JavaScript syntax checks and `npm.cmd test` for authentication and ownership tests. On macOS/Linux, use `npm` in place of `npm.cmd`.
+Open http://localhost:3000 in a browser with MetaMask or Rabby. For first setup, copy `.env.example` to `.env` without overwriting an existing file. Add `OPENAI_API_KEY` using your local editor to enable image generation, then restart the server. Wallet verification and invitations work without an image API key. Keep credentials out of chat, browser code and Git. An Orbio gateway key is not supported by this OpenAI image adapter.
 
-The app supports `.env` on Node 22+ (copy `.env.example` if needed). `MONAD_RPC_URL` can override the public endpoint. `APP_ORIGIN` must match your browser address exactly; use HTTPS for a hosted deployment.
+`APP_ORIGIN` must exactly match the browser origin. `MONAD_RPC_URL` optionally overrides the public Monad endpoint. Run `npm.cmd run check` and `npm.cmd test` for syntax checks and automated tests. On macOS/Linux, use `npm` instead of `npm.cmd`.
 
-## Current prototype
+## What works
 
-Responsive fusion lab, four original placeholder characters, simulated dual approval, procedural SVG fusion previews, and a browser-local family history. Select two distinct parents, check both simulated approvals, and create a fusion. Refresh to confirm local persistence.
+- EIP-191 wallet sign-in, single-use five-minute challenges, and 30-minute HttpOnly sessions. Account/network changes clear the verified UI and log out.
+- Live ownership verification for Chog Genesis on Monad mainnet: chain 143, contract `0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763`.
+- Immutable 24-hour invitations between two distinct holders, with separate signatures binding the parent token IDs, holder addresses, origin, chain, collection, request, expiry, and hashed art direction.
+- Server-side AI image editing using both NFT images plus optional artist references, after both approvals and a fresh check of both owners at the same Monad block.
+- One saved PNG per invitation, public ancestry links, downloads and a shared gallery. Consent, provenance and image bytes persist together in SQLite.
+- A separate sample lab with procedural placeholder art, simulated consent, and browser-local family history. Its approvals are not trusted authorization.
 
-The separate **Your Chog** section connects an injected browser wallet (such as MetaMask or Rabby), switches to Monad mainnet, and requests an EIP-191 login signature. The server verifies this signature against a single-use five-minute challenge before issuing a 30-minute HttpOnly session. This currently supports standard externally owned accounts; smart-contract wallet signatures are not yet supported. Account/network changes clear the UI and log out.
+The collection was identified through [Chog's official Linktree](https://linktr.ee/chognft) and [the linked OpenSea collection](https://opensea.io/collection/chog-genesis). Enter the on-chain token ID from the end of the OpenSea item URL; its displayed artwork number can differ. Manual lookup is available because the collection does not advertise ERC-721 enumeration in our check. Enumeration, when available, is capped at 12 tokens per refresh.
 
-The server reads `balanceOf`, `ownerOf`, and `tokenURI` from Chog Genesis at `0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763` on chain 143. The address comes from item links in the [officially linked collection](https://opensea.io/collection/chog-genesis), via [Chog's Linktree](https://linktr.ee/chognft). The RPC chain ID is checked before reads. The collection does not advertise ERC-721 enumeration in our live check, so holders enter a token ID from the end of their OpenSea item URL. The displayed artwork name/number can differ from this on-chain token ID. Enumeration is supported automatically if available, capped at 12 tokens per refresh.
+## Test with two holders
 
-Metadata and images load directly in the browser from HTTPS/IPFS URLs; a CORS or gateway failure leaves ownership confirmation visible with an OpenSea link. The server does not fetch arbitrary metadata URLs.
+1. Holder A connects and signs the login message, then enters their token ID as Parent A and another holder's token ID as Parent B.
+2. Create the invitation. Review both NFT links and owners, click **Review my approval**, read the complete message, check the consent box, and sign.
+3. Share the invitation link. Holder B connects and reviews/signs their own approval. For local testing, use another browser profile on the same computer. Remote sharing requires a hosted HTTPS instance.
+4. Either holder clicks **Create our character** once both approvals are saved. Parent images load first; either holder can cancel during preparation. After dispatch to the provider, generation cannot be cancelled.
+5. Wait a few minutes; status updates automatically. The completed character, both parent links, download and gallery entry appear. You can leave and return to the invitation link later.
+6. Restart the server and reopen the link: consent and artwork persist. Wallet login must be repeated to take actions.
 
-**Real invitations and signed fusion consent are implemented.** A verified holder supplies two distinct on-chain token IDs held by different wallets. The server checks both owners at the same Monad block and creates an immutable 24-hour invitation. Each holder reviews and signs a separate fusion permission message that binds the app origin, chain, contract, parent tokens, holder addresses, unique request ID, expiry, and versioned art direction. Both signatures are required for the `approved` state. Sign-in alone never approves a fusion. Either invited holder can cancel, including after both have signed.
+Without real holders, run `node scripts/preview-test.mjs`, then open http://localhost:3091. This isolated fixture has test wallets A/B, fake tokens 11/22, and a tiny deterministic PNG labelled **TEST ARTWORK**. It makes no real blockchain or AI calls. It verifies application behavior, not AI visual quality. Never deploy it. The test runner explicitly targets `test/*.test.mjs` so it does not start this fixture.
 
-Ownership is checked when preparing each approval, accepting each signature, and explicitly rechecking a request. A detected transfer permanently invalidates the invitation. GET invitation pages show the last checked block/time; they do not continuously monitor transfers. A future generation handler must recheck both current owners, expiry, and cancellation immediately before starting its one permitted generation. A transfer away and back between checks is not detected without transfer-event tracking.
+## Artist contribution
 
-Invitations and signatures are persisted in `data/chogchemy.sqlite` using built-in Node SQLite; preserve that file and its WAL on a persistent disk. They survive restarts; login sessions do not. Public invitation responses omit raw signatures. The app currently supports one server process; use shared coordination/storage before scaling horizontally. The art direction identifier is bound to consent and cannot be silently changed for an existing invitation. Artist references and the actual generation pipeline remain to be connected.
+Edit `art-direction.json` with your partner's style rules. Place up to four approved PNG/JPEG/WebP drawings in `assets/artist/`, then list their filenames in `references`. The house style is currently provisional; no partner artwork is included yet. Restart after changing it.
 
-AI generation, minting, and on-chain ancestry are **not implemented yet**. The sample lab remains independent of real holdings, and its approvals and locally stored ancestry are untrusted demo data. Placeholder artwork is not official Chog art.
+The style hash covers the rules, version, description and reference image hashes. Existing invitations using a different style cannot generate; create a fresh invitation for new consent. Legacy invitations from before this milestone also need fresh approvals. The adapter uses OpenAI's [image edits API](https://developers.openai.com/api/reference/resources/images/methods/edit), model `gpt-image-2`, one 1024 by 1024 PNG, medium quality by default. Model and quality are configurable server-side.
 
-Sessions and challenges are held in process memory and reset on server restart; use shared storage before scaling to multiple instances. No private keys are requested or stored.
+## Persistence and failures
 
-## Test the wallet milestone
+`data/chogchemy.sqlite` stores invitations, signatures, PNGs and provenance. Use SQLite's online backup mechanism or stop the app and checkpoint its WAL before copying the database. Never commit it. `DATABASE_PATH` can point to a persistent disk. Sessions and the mutation queue are in memory: run exactly one server process/instance.
 
-1. Open http://localhost:3000 with an injected wallet extension.
-2. Click **Connect wallet**, switch to Monad if asked, and inspect/sign the login message.
-3. Check the holder balance. If you own a Chog, enter its on-chain token ID from the OpenSea URL.
-4. Confirm artwork/traits when the metadata gateway permits browser access. A token owned by another address must be rejected.
-5. Switch accounts or networks: the verified preview must clear. Reconnect to reverify.
-6. Try the sample lab without any wallet connection. No real NFT is needed for that demo.
+Generation follows `approved → preparing → generating → generated`. Reference-loading errors return to `approved` and can be retried without an AI call. After dispatch, any provider timeout/error becomes `generation_failed` and is never automatically retried because it may have been charged. On restart, interrupted preparation returns to approved; an interrupted provider call becomes failed. A new invitation permits another attempt, subject to quotas.
 
-## Test real invitations
+Defaults allow 10 dispatched attempts globally and two per participating holder per UTC day, with at most two jobs preparing/generating concurrently. Failed provider attempts also count. Quotas persist across restarts. These cap request counts, not dollars; configure a provider spending budget separately.
 
-1. Sign in as the holder of Parent A. In **Invite your other half**, enter Parent A's token ID and a different holder's token ID for Parent B.
-2. Create the invitation. Inspect both parent links and the holders. Click **Review my approval**, read the entire message, check the explicit consent box, and sign.
-3. Copy the invitation link. Open it with Parent B's wallet, connect, and review/sign the second approval. On localhost, test with another browser profile on the same computer; a localhost link cannot be used by a partner on another computer. Remote sharing requires a hosted instance with `APP_ORIGIN` set to its HTTPS URL.
-4. Refresh the invitation to see both approvals. No AI image or NFT is created at this stage.
-5. Use **Recheck ownership** to verify the current owners again, or **Cancel invitation** as either holder. Requests also expire after 24 hours.
-6. Restart the server and reopen the link: the invitation and signatures persist. Reconnect the wallet to act on it.
+Only HTTPS IPFS paths on explicitly trusted gateway hosts are fetched server-side, with every redirect checked. Metadata is capped at 1 MB, references at 12 MB each, and output at 25 MB. Browser previews load metadata directly and may fail when a gateway blocks CORS.
 
-For repeatable browser tests without real holders, `node scripts/preview-test.mjs` starts an isolated, clearly labelled fixture at http://localhost:3091 with two synthetic wallets, fake tokens 11 and 22, and an in-memory store. This script is never loaded by `npm run dev` or `npm start`; it makes no real-chain calls. Never deploy the fixture.
+## Limitations
 
-## Build milestones
+Original NFTs stay in their holders' wallets. There is no token spending, minting, burn or transfer. Descendants are artwork records with database ancestry, not new NFTs or on-chain ancestry. Smart-contract wallets/EIP-1271 are not supported yet.
 
-1. Collection contract, network, and token metadata confirmed via read-only Monad calls. Confirm artwork permissions/style direction with Chog and the artist.
-2. Wallet sign-in and current ownership verification implemented.
-3. Fusion invitations, persistent dual signatures, cancellation, expiry, and ownership rechecks implemented. Connect the generation handler to the same checks next.
-4. Incorporate the comic artist's approved style guide and references into server-side AI image generation. Keep provider keys on the server.
-5. Persist approved descendants and parent references in a database; add shared family-tree pages. Descendants are artwork records initially, not automatically new NFTs.
-6. Collect holder feedback, record a demo under three minutes, and provide judge testing instructions.
+Ownership is checked at invitation creation, approval preparation/acceptance, rechecks, generation requests, and immediately before the provider call. Detected transfers permanently invalidate consent. Transfers away and back between checks are not detected without event tracking. Finished artwork remains a historical record after later transfers or invitation expiry.
 
-## Team responsibilities
+Image bytes can be checked against their SHA-256 digest, but the server/database are trusted; lineage is not independently attested on-chain. AI visual quality and live paid generation still require testing with a configured account and real parent references.
 
-- Developer: app, ownership checks, consent flow, generation integration, persistence.
-- Artist: original style direction, sample fusions, feature-combination rules, output review.
+## Hosting and team
 
-Original Chog NFTs stay in their holders' wallets. Permissions must expire or become invalid when ownership changes. Do not accept client-side approval flags as authorization in production.
+See [DEPLOY.md](DEPLOY.md). `Dockerfile` and `render.yaml` prepare one Render web service with a persistent disk and `/healthz`. This uses paid hosting: review the quote before creating it. No deployment has been completed yet.
+
+- Developer: wallet and ownership checks, consent, image integration, persistence and hosting.
+- Comic artist: original style guide, approved reference drawings, sample fusions and output review.
+
+For submission, gather real holder feedback, record a demo under three minutes, and disclose sample/test fixtures and any pre-existing work.

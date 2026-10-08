@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "label": "Chogchemy house style",
+  "description": "A provisional style until our artist supplies reference drawings.",
+  "rules": [
+    "Create one new, coherent Chog-inspired creature, rather than two characters beside each other.",
+    "Inherit recognizable shape, facial features, colors, and accessories from both parents in roughly equal measure.",
+    "Use expressive comic linework, a clean silhouette, flat colors, and gentle cel shading.",
+    "Center the full character on a simple warm cream background with enough room around its silhouette.",
+    "No captions, logos, signatures, watermarks, panels, or additional characters."
+  ],
+  "references": []
+}
