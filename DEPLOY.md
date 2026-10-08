@@ -4,7 +4,7 @@ The app is prepared for one Render Docker web service with a persistent disk. Th
 
 1. Sign in at https://dashboard.render.com and connect the private GitHub repository `0xileri/chogchemy`.
 2. Choose **New → Blueprint**, select the repository, and use `render.yaml`.
-3. Enter a valid **OpenAI** API key in Render's secret environment field. An Orbio gateway key is not supported by this image editing adapter. Never paste credentials into chat or GitHub.
+3. Enter a fresh **Orbio** API key as `ORBIO_API_KEY` in Render's secret environment field. The blueprint selects `IMAGE_PROVIDER=orbio`. To use OpenAI directly instead, select `IMAGE_PROVIDER=openai` and configure `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL=gpt-image-2`, and `OPENAI_IMAGE_QUALITY=medium`. Never paste credentials into chat or GitHub.
 4. Review the service and disk cost, then deploy. The app uses Render's `RENDER_EXTERNAL_URL` for its public origin. If you add a custom domain, set `APP_ORIGIN` to that exact HTTPS origin and redeploy. Always use one canonical origin for invitation links and wallet signatures.
 5. Visit `/healthz`, then the homepage in a wallet-enabled browser. Use the real-holder testing steps in README.md.
 

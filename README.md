@@ -12,7 +12,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Open http://localhost:3000 in a browser with MetaMask or Rabby. For first setup, copy `.env.example` to `.env` without overwriting an existing file. Add `OPENAI_API_KEY` using your local editor to enable image generation, then restart the server. Wallet verification and invitations work without an image API key. Keep credentials out of chat, browser code and Git. An Orbio gateway key is not supported by this OpenAI image adapter.
+Open http://localhost:3000 in a browser with MetaMask or Rabby. For first setup, copy `.env.example` to `.env` without overwriting an existing file. Set `IMAGE_PROVIDER=orbio` and add a fresh `ORBIO_API_KEY` using your local editor to enable image generation, then restart the server. Alternatively, select `IMAGE_PROVIDER=openai` with `OPENAI_API_KEY`. Wallet verification and invitations work without an image API key. Keep credentials out of chat, browser code and Git. The Orbio adapter sends its credential only to Orbio; the direct OpenAI adapter uses a separate key.
 
 `APP_ORIGIN` must exactly match the browser origin. `MONAD_RPC_URL` optionally overrides the public Monad endpoint. Run `npm.cmd run check` and `npm.cmd test` for syntax checks and automated tests. On macOS/Linux, use `npm` instead of `npm.cmd`.
 
@@ -42,7 +42,7 @@ Without real holders, run `node scripts/preview-test.mjs`, then open http://loca
 
 Edit `art-direction.json` with your partner's style rules. Place up to four approved PNG/JPEG/WebP drawings in `assets/artist/`, then list their filenames in `references`. The house style is currently provisional; no partner artwork is included yet. Restart after changing it.
 
-The style hash covers the rules, version, description and reference image hashes. Existing invitations using a different style cannot generate; create a fresh invitation for new consent. Legacy invitations from before this milestone also need fresh approvals. The adapter uses OpenAI's [image edits API](https://developers.openai.com/api/reference/resources/images/methods/edit), model `gpt-image-2`, one 1024 by 1024 PNG, medium quality by default. Model and quality are configurable server-side.
+The style hash covers the rules, version, description and reference image hashes. Existing invitations using a different style cannot generate; create a fresh invitation for new consent. Legacy invitations from before this milestone also need fresh approvals. The Orbio adapter uses its OpenRouter-compatible `/api/v1/images` endpoint with `input_references`, model `openai/gpt-image-2`, one 1024 by 1024 PNG, and medium quality. The model is present in [Orbio's live image catalogue](https://api.orbio.so/api/v1/models?output_modalities=image). The optional direct OpenAI adapter uses its [image edits API](https://developers.openai.com/api/reference/resources/images/methods/edit). Model and quality are configurable per provider. No automatic fallback switches between paid providers. The Orbio request/response contract is covered by mocked tests; live paid generation still needs a fresh locally configured key.
 
 ## Persistence and failures
 
@@ -53,6 +53,8 @@ Generation follows `approved → preparing → generating → generated`. Refere
 Defaults allow 10 dispatched attempts globally and two per participating holder per UTC day, with at most two jobs preparing/generating concurrently. Failed provider attempts also count. Quotas persist across restarts. These cap request counts, not dollars; configure a provider spending budget separately.
 
 Only HTTPS IPFS paths on explicitly trusted gateway hosts are fetched server-side, with every redirect checked. Metadata is capped at 1 MB, references at 12 MB each, and output at 25 MB. Browser previews load metadata directly and may fail when a gateway blocks CORS.
+
+Orbio requests have an additional conservative 4 MB combined JSON limit, checked before dispatch or quota reservation. Use small artist reference files. The adapter uses ordinary image inference; Orbio's Incognito encrypted mode currently supports text only and cannot serve this image flow. The app never changes account privacy settings. See [Orbio's setup guide](https://www.orbio.so/incognito/setup.md).
 
 ## Limitations
 

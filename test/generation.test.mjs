@@ -188,3 +188,40 @@ test('HTTP generation needs a session and serves the saved PNG and gallery publi
   assert.equal((await request('/api/gallery')).body.artworks[0].id, r.id);
   assert.equal((await request('/healthz')).status, 200);
 });
+
+test('Orbio receives one image request with both parents and artist references at its own endpoint', async () => {
+  let calls = 0;
+  const generator = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async (url, options) => {
+    calls++; assert.equal(url, 'https://api.orbio.so/api/v1/images');
+    assert.equal(options.headers.Authorization, 'Bearer sk-orbio-test-only');
+    const payload = JSON.parse(options.body);
+    assert.equal(payload.model, 'openai/gpt-image-2'); assert.equal(payload.n, 1); assert.equal(payload.output_format, 'png');
+    assert.equal(payload.input_references.length, 3);
+    for (const reference of payload.input_references) assert.equal(reference.image_url.url, `data:image/png;base64,${png.toString('base64')}`);
+    return Response.json({ data: [{ b64_json: png.toString('base64') }] });
+  } });
+  const parent = { tokenId: '11', bytes: png, mime: 'image/png' };
+  const result = await generator.generate({ parents: [parent, parent], artDirection: { rules: ['Draw one character'], images: [parent] } });
+  assert.equal(result.provider, 'orbio'); assert.deepEqual(result.bytes, png); assert.equal(calls, 1);
+});
+
+test('Orbio provider never uses the OpenAI key or retries a rejected or malformed response', async () => {
+  assert.throws(() => createImageGenerator({ provider: 'orbio', apiKey: 'sk-proj-test-only' }), /Orbio gateway key/);
+  assert.throws(() => createImageGenerator({ provider: 'unknown' }), /IMAGE_PROVIDER/);
+  const missing = createImageGenerator({ provider: 'orbio', apiKey: '' }); assert.equal(missing.configured, false);
+  let calls = 0; const parent = { bytes: png, mime: 'image/png' }, input = { parents: [parent, parent], artDirection: { rules: [], images: [] } };
+  const rejected = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async () => { calls++; return new Response('secret account details', { status: 402 }); } });
+  await assert.rejects(rejected.generate(input), error => error.message === 'Image provider returned HTTP 402.'); assert.equal(calls, 1);
+  const malformed = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async () => Response.json({ data: [{ b64_json: Buffer.from('<svg/>').toString('base64') }] }) });
+  await assert.rejects(malformed.generate(input), /PNG|Reference images/);
+});
+
+test('oversized Orbio reference payload is rejected before dispatch and quota reservation', async () => {
+  let calls = 0;
+  const generator = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async () => { calls++; throw new Error('Must not dispatch'); } });
+  const f = fixture({ imageGenerator: generator, loadReference: async () => ({ bytes: Buffer.alloc(1600000), mime: 'image/png' }) });
+  const r = await f.create(); await f.service.generate(r.id, address(a)); await f.service.idle();
+  assert.equal(calls, 0); assert.equal(f.service.get(r.id).state, 'approved');
+  assert.equal(f.store.get(r.id).generation.providerStartedAt, undefined);
+  assert.match(f.service.get(r.id).generation.error, /Orbio request limit/);
+});

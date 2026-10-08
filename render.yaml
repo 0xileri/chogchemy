@@ -13,11 +13,13 @@ services:
     envVars:
       - key: DATABASE_PATH
         value: /var/data/chogchemy.sqlite
-      - key: OPENAI_API_KEY
+      - key: IMAGE_PROVIDER
+        value: orbio
+      - key: ORBIO_API_KEY
         sync: false
-      - key: OPENAI_IMAGE_MODEL
-        value: gpt-image-2
-      - key: OPENAI_IMAGE_QUALITY
+      - key: ORBIO_IMAGE_MODEL
+        value: openai/gpt-image-2
+      - key: ORBIO_IMAGE_QUALITY
         value: medium
       - key: GENERATION_DAILY_LIMIT
         value: 10

@@ -90,6 +90,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     try {
       const initial = getRecord(id);
       const parents = await Promise.all(initial.parents.map(p => loadReference(chain, p.tokenId)));
+      imageGenerator.validateInput?.({ parents, artDirection });
       const dispatch = await serial(async () => {
         const record = getRecord(id);
         if (record.state !== 'preparing') return false;
@@ -100,7 +101,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
         await validate(record);
         checkQuota(record, false);
         record.state = 'generating';
-        record.generation = { providerStartedAt: now(), mode: imageGenerator.mode, model: imageGenerator.model };
+        record.generation = { providerStartedAt: now(), mode: imageGenerator.mode, model: imageGenerator.model, provider: imageGenerator.provider || null };
         record.references = parents.map(({ bytes, ...reference }) => reference);
         store.put(record); return true;
       });
@@ -111,7 +112,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       await serial(() => {
         const record = getRecord(id);
         record.state = 'generated';
-        record.artwork = { digest: digest(result.bytes), createdAt: now(), model: result.model, mode: result.mode };
+        record.artwork = { digest: digest(result.bytes), createdAt: now(), model: result.model, mode: result.mode, provider: result.provider || null };
         record.generation.providerRequestId = result.providerRequestId || null;
         store.complete(record, result.bytes);
       });
