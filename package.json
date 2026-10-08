@@ -1,0 +1,19 @@
+{
+  "name": "chogchemy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Artist-guided Chog fusion with holder-approved ancestry.",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check src/application.mjs && node --check src/chain.mjs && node --check src/fusions.mjs && node --check src/fusion-store.mjs && node --check public/app.js && node --check public/wallet.js && node --check public/fusion.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "viem": "^2.56.8"
+  }
+}
