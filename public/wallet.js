@@ -1,5 +1,13 @@
 const $ = id => document.getElementById(id);
 let provider = null, address = null, config = null, revision = 0, busy = false;
+const previewCache = new Map();
+export async function getChogPreview(tokenId) {
+  const entry = previewCache.get(tokenId);
+  if (entry && entry.expires > Date.now()) return entry.promise;
+  if (previewCache.size >= 40) previewCache.delete(previewCache.keys().next().value);
+  const promise = api(`/api/chog-preview?id=${encodeURIComponent(tokenId)}`).catch(error => { if (previewCache.get(tokenId)?.promise === promise) previewCache.delete(tokenId); throw error; });
+  previewCache.set(tokenId, { promise, expires: Date.now() + 30000 }); return promise;
+}
 const status = text => { $('wallet-status').textContent = text; };
 async function api(path, body) {
   const response = await fetch(path, { credentials: 'same-origin', ...(body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) });
@@ -14,6 +22,7 @@ async function api(path, body) {
 }
 function clearWallet() {
   revision++; address = null;
+  previewCache.clear();
   $('holder-tools').hidden = true; $('verified-chog').hidden = true;
   $('chog-art').replaceChildren(); $('owned-chogs').replaceChildren(); $('token-id').value = '';
   $('manual-chog').open = false;
@@ -110,25 +119,6 @@ async function refreshChogs() {
   } catch (error) { if (attempt === revision) { $('balance-status').textContent = ''; status(error.message); } }
   finally { $('refresh-chogs').disabled = false; }
 }
-function safeMediaUrl(value) {
-  if (typeof value !== 'string' || value.length > 4096) return null;
-  if (value.startsWith('ipfs://')) value = 'https://ipfs.io/ipfs/' + value.slice(7).replace(/^ipfs\//, '');
-  try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : null; } catch { return null; }
-}
-async function readMetadata(uri) {
-  if (typeof uri !== 'string') throw new Error('Metadata unavailable.');
-  if (uri.startsWith('data:application/json;base64,') && uri.length < 1000000) return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(uri.split(',')[1]), c => c.charCodeAt(0))));
-  if (uri.startsWith('data:application/json,')) { if (uri.length > 1000000) throw new Error('Metadata too large.'); return JSON.parse(decodeURIComponent(uri.split(',').slice(1).join(','))); }
-  const url = safeMediaUrl(uri);
-  if (!url) throw new Error('Metadata URL is unsupported.');
-  const response = await fetch(url, { signal: AbortSignal.timeout(10000), credentials: 'omit', referrerPolicy: 'no-referrer' });
-  if (!response.ok || !response.body) throw new Error('Metadata unavailable.');
-  const reader = response.body.getReader(); let length = 0, chunks = [];
-  while (true) { const { done, value } = await reader.read(); if (done) break; length += value.length; if (length > 1000000) { await reader.cancel(); throw new Error('Metadata too large.'); } chunks.push(value); }
-  const bytes = new Uint8Array(length); let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-  return JSON.parse(new TextDecoder().decode(bytes));
-}
 async function lookup() {
   if (!address) { status('Connect your wallet first.'); return; }
   const tokenId = $('token-id').value.trim();
@@ -146,15 +136,15 @@ async function lookup() {
     status('Ownership confirmed. You can use this token as Parent A in an invitation.');
     window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: token.tokenId } }));
     try {
-      const metadata = await readMetadata(token.tokenURI);
+      const metadata = await getChogPreview(token.tokenId);
       if (attempt !== revision) return;
       if (typeof metadata?.name === 'string') $('chog-name').textContent = metadata.name.slice(0, 200);
-      const attributes = Array.isArray(metadata?.attributes) ? metadata.attributes : [];
-      $('chog-traits').textContent = attributes.filter(x => x && typeof x.trait_type === 'string' && ['string', 'number'].includes(typeof x.value)).slice(0, 20).map(x => `${x.trait_type}: ${x.value}`).join(' · ').slice(0, 2000) || 'No traits provided.';
-      const imageUrl = safeMediaUrl(metadata?.image);
+      const attributes = Array.isArray(metadata?.traits) ? metadata.traits : [];
+      $('chog-traits').textContent = attributes.map(x => `${x.type}: ${x.value}`).join(' · ').slice(0, 2000) || 'No traits provided.';
+      const imageUrl = metadata.imageUrl;
       if (imageUrl) { const image = document.createElement('img'); image.alt = $('chog-name').textContent; image.referrerPolicy = 'no-referrer'; image.src = imageUrl; image.addEventListener('error', () => { if (attempt === revision) $('chog-art').textContent = 'Artwork unavailable · View on OpenSea'; }); $('chog-art').replaceChildren(image); }
       else $('chog-art').textContent = 'Artwork unavailable · View on OpenSea';
-    } catch { if (attempt === revision) { $('chog-traits').textContent = 'Ownership confirmed. This metadata host could not be loaded in your browser; view artwork on OpenSea.'; $('chog-art').textContent = 'Artwork unavailable'; } }
+    } catch { if (attempt === revision) { $('chog-traits').textContent = 'Ownership confirmed. Artwork is temporarily unavailable; refresh or view it on OpenSea.'; $('chog-art').textContent = 'Artwork unavailable'; } }
   } catch (error) { if (attempt === revision) status(error.message); }
 }
 $('connect-wallet').addEventListener('click', connect);

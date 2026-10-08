@@ -1,10 +1,32 @@
-import { api, getWalletAddress, signWalletMessage } from './wallet.js';
+import { api, getWalletAddress, signWalletMessage, getChogPreview } from './wallet.js';
 
 const $ = id => document.getElementById(id);
 let current = null, message = null, operation = 0, busy = false, poll = null;
 const status = text => { $('fusion-status').textContent = text; };
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const active = request => ['awaiting_approvals', 'approved'].includes(request.state) && request.expires > Date.now();
+const previewStates = { a: { version: 0, timer: null }, b: { version: 0, timer: null } };
+function previewParent(side, immediate = false) {
+  const state = previewStates[side], version = ++state.version;
+  clearTimeout(state.timer);
+  const tokenId = $(`fusion-parent-${side}`).value.trim(), card = $(`parent-preview-${side}`);
+  const art = $(`parent-art-${side}`), title = $(`parent-title-${side}`), note = $(`parent-note-${side}`);
+  art.replaceChildren(); card.hidden = !tokenId || !getWalletAddress();
+  if (card.hidden) return;
+  title.textContent = `Token #${tokenId}`; note.textContent = '';
+  if (!/^(0|[1-9][0-9]{0,77})$/.test(tokenId)) { note.textContent = 'Enter a valid numeric token ID.'; return; }
+  note.textContent = 'Loading artwork…'; art.textContent = '✳';
+  state.timer = setTimeout(async () => {
+    try {
+      const preview = await getChogPreview(tokenId);
+      if (version !== state.version || !getWalletAddress()) return;
+      title.textContent = preview.name; note.textContent = `On-chain token #${tokenId} · Artwork preview`;
+      const image = document.createElement('img'); image.alt = `${preview.name} · token #${tokenId}`; image.src = preview.imageUrl;
+      image.addEventListener('error', () => { if (version === state.version) { art.textContent = 'Artwork unavailable'; note.textContent = 'Try changing the token ID or refreshing.'; } });
+      art.replaceChildren(image);
+    } catch (error) { if (version === state.version) { art.textContent = 'Artwork unavailable'; note.textContent = error.message; } }
+  }, immediate ? 0 : 450);
+}
 function resetMessage() { message = null; $('approval-review').hidden = true; $('approval-confirm').checked = false; $('sign-fusion').disabled = true; }
 function controls() {
   const address = getWalletAddress(), role = current?.parents.findIndex(p => p.owner === address) ?? -1;
@@ -36,6 +58,11 @@ function render(request) {
     const approval = document.createElement('p'); approval.className = 'approval-state'; approval.textContent = parent.approvedAt ? `Signed ${new Date(parent.approvedAt).toLocaleString()}` : 'Awaiting signed approval';
     const link = document.createElement('a'); link.textContent = 'View Chog ↗'; link.href = `https://opensea.io/item/monad/${request.collection.address}/${parent.tokenId}`; link.target = '_blank'; link.rel = 'noopener noreferrer';
     card.append(label, title, holder, approval, link); $('invitation-parents').append(card);
+    if (getWalletAddress()) void getChogPreview(parent.tokenId).then(preview => {
+      if (!card.isConnected || current?.id !== request.id) return;
+      const image = document.createElement('img'); image.className = 'invitation-art'; image.alt = preview.name; image.src = preview.imageUrl;
+      image.addEventListener('error', () => image.remove()); label.after(image);
+    }).catch(() => {});
   }
   $('invitation-expiry').textContent = `Expires ${new Date(request.expires).toLocaleString()} · Art direction ${request.artDirection}`;
   $('ownership-check').textContent = `Ownership last checked ${new Date(request.checkedAt).toLocaleString()} at Monad block ${request.checkedBlock}.`;
@@ -173,9 +200,11 @@ $('copy-invitation').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(current.invitationUrl); status('Invitation link copied.'); }
   catch { $('invitation-link').select(); status('Select and copy the invitation link above.'); }
 });
-window.addEventListener('chogchemy:token', event => { $('fusion-parent-a').value = event.detail.tokenId; });
+for (const side of ['a', 'b']) for (const event of ['input', 'change']) $(`fusion-parent-${side}`).addEventListener(event, () => previewParent(side));
+window.addEventListener('chogchemy:token', event => { $('fusion-parent-a').value = event.detail.tokenId; previewParent('a', true); });
 window.addEventListener('chogchemy:wallet', () => {
   operation++; resetMessage(); controls();
+  previewParent('a', true); previewParent('b', true);
   if (current) void load(current.id);
   void listMine();
 });

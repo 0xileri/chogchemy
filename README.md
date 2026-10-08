@@ -20,6 +20,7 @@ Open http://localhost:3000 in a browser with MetaMask or Rabby. For first setup,
 
 - EIP-191 wallet sign-in, single-use five-minute challenges, and 30-minute HttpOnly sessions. Account/network changes clear the verified UI and log out.
 - Live ownership verification for Chog Genesis on Monad mainnet: chain 143, contract `0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763`.
+- Artwork previews for the selected holder NFT, both parent token inputs, and invitation parents. Entering the partner's token ID loads its artwork automatically; previews do not grant ownership or consent.
 - Immutable 24-hour invitations between two distinct holders, with separate signatures binding the parent token IDs, holder addresses, origin, chain, collection, request, expiry, and hashed art direction.
 - Server-side AI image editing using both NFT images plus optional artist references, after both approvals and a fresh check of both owners at the same Monad block.
 - One saved PNG per invitation, public ancestry links, downloads and a shared gallery. Consent, provenance and image bytes persist together in SQLite.
@@ -36,7 +37,7 @@ The collection was identified through [Chog's official Linktree](https://linktr.
 5. Wait a few minutes; status updates automatically. The completed character, both parent links, download and gallery entry appear. You can leave and return to the invitation link later.
 6. Restart the server and reopen the link: consent and artwork persist. Wallet login must be repeated to take actions.
 
-Without real holders, run `node scripts/preview-test.mjs`, then open http://localhost:3091. This isolated fixture has test wallets A/B, fake tokens 11/22, and a tiny deterministic PNG labelled **TEST ARTWORK**. It makes no real blockchain or AI calls. It verifies application behavior, not AI visual quality. Never deploy it. The test runner explicitly targets `test/*.test.mjs` so it does not start this fixture.
+Without real holders, run `node scripts/preview-test.mjs`, then open http://localhost:3091. This isolated fixture has test wallets A/B, fake tokens 11/22 with original procedural preview art, and a tiny deterministic generated PNG labelled **TEST ARTWORK**. It makes no real blockchain or AI calls. It verifies application behavior, not AI visual quality. Never deploy it. The test runner explicitly targets `test/*.test.mjs` so it does not start this fixture.
 
 ## Artist contribution
 
@@ -52,7 +53,7 @@ Generation follows `approved → preparing → generating → generated`. Refere
 
 Defaults allow 10 dispatched attempts globally and two per participating holder per UTC day, with at most two jobs preparing/generating concurrently. Failed provider attempts also count. Quotas persist across restarts. These cap request counts, not dollars; configure a provider spending budget separately.
 
-Only HTTPS IPFS paths on explicitly trusted gateway hosts are fetched server-side, with every redirect checked. Metadata is capped at 1 MB, references at 12 MB each, and output at 25 MB. Browser previews load metadata directly and may fail when a gateway blocks CORS.
+Only HTTPS IPFS paths on explicitly trusted gateway hosts are fetched server-side, with every redirect checked. Metadata is capped at 1 MB, references at 12 MB each, and output at 25 MB. Authenticated artwork previews use the same server-side loader and trusted gateway fallback, avoiding browser CORS failures. The preview cache lasts five minutes and is bounded to 40 entries/64 MB, with at most four loads in progress. Token input changes clear stale artwork immediately and load after a short debounce. A preview failure leaves ownership and invitation checks available.
 
 Orbio requests have an additional conservative 4 MB combined JSON limit, checked before dispatch or quota reservation. Use small artist reference files. The adapter uses ordinary image inference; Orbio's Incognito encrypted mode currently supports text only and cannot serve this image flow. The app never changes account privacy settings. See [Orbio's setup guide](https://www.orbio.so/incognito/setup.md).
 

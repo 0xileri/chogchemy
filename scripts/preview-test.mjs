@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createApplication } from '../src/application.mjs';
+import { fixtureArt } from './fixture-art.mjs';
 
 const accounts = [privateKeyToAccount(generatePrivateKey()), privateKeyToAccount(generatePrivateKey())];
 const origin = 'http://localhost:3091';
@@ -12,7 +13,7 @@ const chain = {
   async owners(tokens) { return { owners: tokens.map(id => { const index = ids.indexOf(id); if (index < 0) throw new Error('Unknown test token'); return accounts[index].address; }), blockNumber: 12345n }; },
   async balance() { return 1n; },
   async ownedTokenIds(address) { return [ids[accounts.findIndex(a => a.address.toLowerCase() === address)]]; },
-  async token(id) { return { owner: (await this.owners([id])).owners[0], tokenURI: 'data:application/json,' + encodeURIComponent(JSON.stringify({ name: `Test Chog #${id}`, attributes: [{ trait_type: 'Fixture', value: 'Synthetic NFT for browser tests' }] })) }; },
+  async token(id) { return { owner: (await this.owners([id])).owners[0], tokenURI: 'data:application/json,' + encodeURIComponent(JSON.stringify({ name: `Test Chog #${id}`, image: `data:image/png;base64,${fixtureArt(id === '22').toString('base64')}`, attributes: [{ trait_type: 'Fixture', value: 'Synthetic NFT for browser tests' }] })) }; },
 };
 const fixturePng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5H0AAAAASUVORK5CYII=', 'base64');
 const app = createApplication({ chain, origin, generationOptions: {

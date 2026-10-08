@@ -4,6 +4,7 @@ import { isAddress, verifyMessage } from 'viem';
 import { collection, createChain } from './chain.mjs';
 import { createFusionService, FusionError } from './fusions.mjs';
 import { createMemoryFusionStore } from './fusion-store.mjs';
+import { createChogPreviews } from './chog-previews.mjs';
 
 const staticFiles = {
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
@@ -12,10 +13,11 @@ const staticFiles = {
 const tokenPattern = /^(0|[1-9][0-9]{0,77})$/;
 export function validTokenId(value) { return typeof value === 'string' && tokenPattern.test(value) && BigInt(value) < 2n ** 256n; }
 
-export function createApplication({ chain = createChain(), fusionStore = createMemoryFusionStore(), origin = process.env.APP_ORIGIN || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`, now = Date.now, generationOptions = {} } = {}) {
+export function createApplication({ chain = createChain(), fusionStore = createMemoryFusionStore(), origin = process.env.APP_ORIGIN || process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`, now = Date.now, generationOptions = {}, previewOptions = {} } = {}) {
   const challenges = new Map(), sessions = new Map(), limits = new Map();
   const appOrigin = new URL(origin).origin;
   const fusions = createFusionService({ ...generationOptions, store: fusionStore, chain, origin: appOrigin, now });
+  const previews = createChogPreviews({ ...previewOptions, chain, now });
   const secure = appOrigin.startsWith('https:') ? '; Secure' : '';
   const cookie = (value, age = 1800) => `chogchemy_session=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${age}${secure}`;
   const send = (res, status, body) => {
@@ -90,6 +92,18 @@ export function createApplication({ chain = createChain(), fusionStore = createM
       const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate))?$/);
       if (req.method === 'GET' && fusionRoute && !fusionRoute[2]) { send(res, 200, fusions.get(fusionRoute[1], session?.address)); return; }
       if (!session) { send(res, 401, { error: 'Connect and verify your wallet first.' }); return; }
+      if (['GET', 'HEAD'].includes(req.method) && ['/api/chog-preview', '/api/chog-image'].includes(url.pathname)) {
+        const tokenId = url.searchParams.get('id');
+        if (!validTokenId(tokenId)) { send(res, 400, { error: 'Enter a valid numeric token ID.' }); return; }
+        try {
+          if (url.pathname === '/api/chog-preview') { send(res, 200, await previews.preview(tokenId)); return; }
+          const version = url.searchParams.get('v');
+          if (!/^[a-f0-9]{64}$/.test(version || '')) { send(res, 400, { error: 'Reload the artwork preview.' }); return; }
+          const image = await previews.image(tokenId, version);
+          res.writeHead(200, { 'Content-Type': image.mime, 'Content-Length': image.bytes.length, 'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff' });
+          res.end(req.method === 'HEAD' ? undefined : image.bytes); return;
+        } catch { send(res, 502, { error: 'Artwork preview is temporarily unavailable. Check the token ID or try again.' }); return; }
+      }
       if (url.pathname === '/api/fusions' && req.method === 'GET') { send(res, 200, { requests: fusions.list(session.address) }); return; }
       if (url.pathname === '/api/fusions' && req.method === 'POST') { send(res, 201, await fusions.create(session.address, await body(req))); return; }
       if (fusionRoute && req.method === 'POST') {
