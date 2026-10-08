@@ -51,6 +51,24 @@ test('creation rejects unauthorised, duplicate, malformed, and same-holder paren
   await assert.rejects(f.service.create(lower(bob), { parentA: '11', parentB: '22' }), errorStatus(403));
   for (const input of [null, {}, { parentA: '11', parentB: '11' }, { parentA: '-1', parentB: '22' }, { parentA: '11', parentB: String(2n ** 256n) }, { parentA: '11', parentB: '44' }]) await assert.rejects(f.service.create(lower(alice), input), errorStatus(400));
 });
+
+test('optional partner approval verifies the creator, permits two owned Chogs, and validates the policy', async () => {
+  const f = fixture();
+  const r = await f.service.create(lower(alice), { parentA: '11', parentB: '44', requirePartnerApproval: false });
+  assert.equal(r.state, 'approved'); assert.equal(r.approvalPolicy, 'creator'); assert.ok(r.creatorVerifiedAt);
+  assert.equal(r.canGenerate, true); assert.ok(r.parents.every(p => p.approvedAt === null));
+  await assert.rejects(f.service.create(lower(bob), { parentA: '11', parentB: '22', requirePartnerApproval: false }), errorStatus(403));
+  for (const requirePartnerApproval of ['false', 0, null, {}]) await assert.rejects(f.service.create(lower(alice), { parentA: '11', parentB: '22', requirePartnerApproval }), errorStatus(400));
+});
+
+test('legacy invitations keep both-signature policy and exact signed messages', async () => {
+  const f = fixture(), r = await f.create();
+  const before = await f.service.message(r.id, lower(alice));
+  const legacy = f.store.get(r.id); delete legacy.approvalPolicy; delete legacy.creatorVerifiedAt; f.store.put(legacy);
+  const after = await f.service.message(r.id, lower(alice));
+  assert.equal(after.message, before.message); assert.equal(after.request.approvalPolicy, 'both_holders');
+  assert.equal((await f.approve(r.id, alice)).state, 'awaiting_approvals');
+});
 test('outsiders cannot request an approval message, sign, cancel, or recheck', async () => {
   const f = fixture(), r = await f.create();
   for (const action of ['message', 'approve', 'cancel', 'recheck']) await assert.rejects(f.service[action](r.id, lower(outsider), '0x00'), errorStatus(403));
@@ -169,4 +187,10 @@ test('HTTP API supports public invitations and only authenticated holder approva
   }
   const final = await request(`/api/fusions/${id}`); assert.equal(final.body.state, 'approved');
   assert.doesNotMatch(JSON.stringify(final.body), /signature/);
+  const soloInput = { parentA: '11', parentB: '22', requirePartnerApproval: false };
+  assert.equal((await request('/api/fusions', { data: soloInput })).status, 401);
+  assert.equal((await request('/api/fusions', { cookie: cookieB, data: soloInput })).status, 403);
+  const solo = await request('/api/fusions', { cookie: cookieA, data: soloInput });
+  assert.equal(solo.status, 201); assert.equal(solo.body.state, 'approved'); assert.equal(solo.body.canGenerate, true);
+  assert.equal((await request(`/api/fusions/${solo.body.id}`, { cookie: cookieB })).body.canGenerate, false);
 });

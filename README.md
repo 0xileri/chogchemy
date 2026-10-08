@@ -1,6 +1,6 @@
 # Chogchemy
 
-Two Chog holders create one new character, with signed consent, artist style references, and ancestry linked to their original NFTs. Built for Chogathon.
+Create a character from your Chog and another Chog, with optional partner approval, artist style references, and ancestry linked to the original NFTs. Built for Chogathon.
 
 ## Run locally
 
@@ -21,19 +21,20 @@ Open http://localhost:3000 in a browser with MetaMask or Rabby. For first setup,
 - EIP-191 wallet sign-in, single-use five-minute challenges, and 30-minute HttpOnly sessions. Account/network changes clear the verified UI and log out.
 - Live ownership verification for Chog Genesis on Monad mainnet: chain 143, contract `0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763`.
 - Artwork previews for the selected holder NFT, both parent token inputs, and invitation parents. Entering the partner's token ID loads its artwork automatically; previews do not grant ownership or consent.
-- Immutable 24-hour invitations between two distinct holders, with separate signatures binding the parent token IDs, holder addresses, origin, chain, collection, request, expiry, and hashed art direction.
-- Server-side AI image editing using both NFT images plus optional artist references, after both approvals and a fresh check of both owners at the same Monad block.
+- Immutable 24-hour fusion requests. By default, verified ownership of Parent A allows its holder to create without extra signatures; Parent B's holder can optionally approve. Only the creator can dispatch generation in this mode, and only their holder quota is used. Two distinct NFTs in the same wallet are also supported.
+- An optional **Require both holder signatures before fusion** checkbox creates an invitation between distinct holders that requires both signatures. Signatures bind the parent token IDs, holders, origin, chain, request, expiry, and hashed art direction. Existing invitations retain their original two-signature requirement.
+- Server-side AI image editing using both NFT images plus optional artist references, after satisfying the request's approval policy and a fresh check of both owners at the same Monad block. Public ancestry and gallery entries show whether the partner actually signed.
 - One saved PNG per invitation, public ancestry links, downloads and a shared gallery. Consent, provenance and image bytes persist together in SQLite.
 - A separate sample lab with procedural placeholder art, simulated consent, and browser-local family history. Its approvals are not trusted authorization.
 
 The collection was identified through [Chog's official Linktree](https://linktr.ee/chognft) and [the linked OpenSea collection](https://opensea.io/collection/chog-genesis). Enter the on-chain token ID from the end of the OpenSea item URL; its displayed artwork number can differ. After login, automatic discovery searches the collection using batched on-chain owner reads at one block. The first scan takes a few seconds; a shared 30-second cache reduces repeated RPC work. The range is bounded by maxSupply (capped at 5,000), and the number of successful owner reads must match totalSupply before results are accepted. A changed wallet balance refreshes the cache. If discovery fails, manual lookup remains available. Up to 12 Chogs are shown per wallet; selecting a token always rechecks current ownership.
 
-## Test with two holders
+## Test the fusion flows
 
 1. Holder A connects and signs the login message. Their Chogs are found automatically; a sole Chog is selected and fills Parent A. With several, choose one. Enter the other holder's token ID as Parent B.
-2. Create the invitation. Review both NFT links and owners, click **Review my approval**, read the complete message, check the consent box, and sign.
-3. Share the invitation link. Holder B connects and reviews/signs their own approval. For local testing, use another browser profile on the same computer. Remote sharing requires a hosted HTTPS instance.
-4. Either holder clicks **Create our character** once both approvals are saved. Parent images load first; either holder can cancel during preparation. After dispatch to the provider, generation cannot be cancelled.
+2. Leave **Require both holder signatures before fusion** unchecked and click **Prepare fusion**. Review both NFT images and owners. Holder A can click **Create our character** immediately, with no additional signature. Holder B can use the shared link to **Add my optional approval** before generation; an unsigned partner is labelled clearly. An optional approval does not grant the partner permission to dispatch the creator's generation.
+3. To test the collaboration flow, check **Require both holder signatures before fusion** before preparing a new request. Each holder clicks **Review my approval**, reads the complete message, checks the consent box, and signs. For local testing, use another browser profile on the same computer. Remote sharing requires a hosted HTTPS instance. The policy cannot be changed after creation; create a new request to choose another mode.
+4. In the collaboration flow, either holder clicks **Create our character** once both approvals are saved. Parent images load first; either holder can cancel during preparation in both modes. After dispatch to the provider, generation cannot be cancelled.
 5. Wait a few minutes; status updates automatically. The completed character, both parent links, download and gallery entry appear. You can leave and return to the invitation link later.
 6. Restart the server and reopen the link: consent and artwork persist. Wallet login must be repeated to take actions.
 
@@ -51,7 +52,7 @@ The style hash covers the rules, version, description and reference image hashes
 
 Generation follows `approved → preparing → generating → generated`. Reference-loading errors return to `approved` and can be retried without an AI call. After dispatch, any provider timeout/error becomes `generation_failed` and is never automatically retried because it may have been charged. On restart, interrupted preparation returns to approved; an interrupted provider call becomes failed. A new invitation permits another attempt, subject to quotas.
 
-Defaults allow 10 dispatched attempts globally and two per participating holder per UTC day, with at most two jobs preparing/generating concurrently. Failed provider attempts also count. Quotas persist across restarts. These cap request counts, not dollars; configure a provider spending budget separately.
+Defaults allow 10 dispatched attempts globally and two per accountable holder per UTC day: the creator in optional approval mode, or both participants when two signatures are required. Referencing another holder's Chog in optional mode does not consume their quota. At most two jobs can prepare/generate concurrently. Failed provider attempts also count. Quotas persist across restarts. These cap request counts, not dollars; configure a provider spending budget separately.
 
 Only HTTPS IPFS paths on explicitly trusted gateway hosts are fetched server-side, with every redirect checked. Metadata is capped at 1 MB, references at 12 MB each, and output at 25 MB. Authenticated artwork previews use the same server-side loader and trusted gateway fallback, avoiding browser CORS failures. The preview cache lasts five minutes and is bounded to 40 entries/64 MB, with at most four loads in progress. Token input changes clear stale artwork immediately and load after a short debounce. A preview failure leaves ownership and invitation checks available.
 

@@ -9,16 +9,20 @@ export class FusionError extends Error {
 }
 const fail = (status, message) => { throw new FusionError(status, message); };
 const tokenIdValid = value => typeof value === 'string' && /^(0|[1-9][0-9]{0,77})$/.test(value) && BigInt(value) < 2n ** 256n;
+// Missing policy denotes an existing invitation whose two signatures remain required.
+const optionalPartner = record => record.approvalPolicy === 'creator';
+const quotaHolders = record => optionalPartner(record) ? [record.createdBy] : [...new Set(record.parents.map(p => p.owner))];
 export function approvalMessage(record, owner) {
   return [
     'Chogchemy — approve one character fusion',
     '', `App: ${record.origin}`, `Request ID: ${record.id}`, `Chain ID: ${record.chainId}`, `Collection: ${record.collection}`,
     ...record.parents.map((parent, index) => `Parent ${index === 0 ? 'A' : 'B'}: token ${parent.tokenId} · holder ${parent.owner}`),
     `Approving holder: ${owner}`, `Art direction: ${record.artDirection}`,
+    ...(optionalPartner(record) ? ['Approval policy: Partner approval optional; only the verified creator can start generation.'] : []),
     ...(record.artDirectionHash ? [`Style SHA-256: ${record.artDirectionHash}`] : []),
     ...(record.artDirectionSnapshot ? ['Style rules:', ...record.artDirectionSnapshot.rules.map(rule => `• ${rule}`), `Artist reference images: ${record.artDirectionSnapshot.references.length}`] : []),
     `Created: ${new Date(record.createdAt).toISOString()}`, `Expires: ${new Date(record.expires).toISOString()}`,
-    '', 'I authorize Chogchemy to use the two listed Chogs as visual references for one AI-generated character and record its ancestry, after both listed holders approve.',
+    '', optionalPartner(record) ? 'I approve using my listed Chog as a visual reference in this one AI-generated character and its ancestry record. The verified creator can proceed without my signature; signing records my optional approval.' : 'I authorize Chogchemy to use the two listed Chogs as visual references for one AI-generated character and record its ancestry, after both listed holders approve.',
     'This permission is limited to this request and art direction. It can be cancelled before generation and becomes invalid if a parent changes ownership or the request expires.',
     'This signature does not transfer an NFT, approve token spending, mint anything, or authorize a blockchain transaction.',
   ].join('\n');
@@ -76,6 +80,9 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       generation: record.generation ? { error: record.generation.error || null, startedAt: record.generation.providerStartedAt || null } : null,
       artwork: record.artwork ? { ...record.artwork, url: `/artwork/${record.id}.png` } : null,
       artDirectionHash: record.artDirectionHash || null,
+      approvalPolicy: optionalPartner(record) ? 'creator' : 'both_holders',
+      createdBy: record.createdBy, creatorVerifiedAt: record.creatorVerifiedAt || null,
+      canGenerate: Boolean(address && (optionalPartner(record) ? address === record.createdBy : record.parents.some(p => p.owner === address))),
     };
   }
   function checkQuota(record, checkConcurrency = true) {
@@ -83,7 +90,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     if (checkConcurrency && records.filter(r => r.id !== record.id && ['preparing', 'generating'].includes(r.state)).length >= concurrency) fail(429, 'The studio is busy. Try again after another fusion finishes.');
     const day = Math.floor(now() / 86400000) * 86400000;
     const attempts = records.filter(r => r.generation?.providerStartedAt >= day);
-    if (attempts.length >= dailyLimit || record.parents.some(p => attempts.filter(r => r.parents.some(parent => parent.owner === p.owner)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
+    if (attempts.length >= dailyLimit || quotaHolders(record).some(holder => attempts.filter(r => quotaHolders(r).includes(holder)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
   }
   async function runGeneration(id) {
     let dispatched = false;
@@ -95,8 +102,10 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
         const record = getRecord(id);
         if (record.state !== 'preparing') return false;
         if (record.artDirectionHash !== artDirection.hash) fail(409, 'The art direction changed. Create a new invitation.');
+        if (optionalPartner(record) && (record.createdBy !== record.parents[0].owner || !record.creatorVerifiedAt)) fail(403, 'Verified creator authorization is required.');
         for (const parent of record.parents) {
-          if (!parent.approval || !await verifyMessage({ address: parent.owner, message: approvalMessage(record, parent.owner), signature: parent.approval.signature })) fail(403, 'Both valid holder approvals are required.');
+          if (!parent.approval && optionalPartner(record)) continue;
+          if (!parent.approval || !await verifyMessage({ address: parent.owner, message: approvalMessage(record, parent.owner), signature: parent.approval.signature })) fail(403, 'Valid holder approvals are required.');
         }
         await validate(record);
         checkQuota(record, false);
@@ -132,9 +141,10 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     artwork(id) { const record = getRecord(id); if (record.state !== 'generated') fail(404, 'Artwork not found.'); return store.artwork(id); },
     generate(id, address) { return serial(async () => {
       const record = getRecord(id); participant(record, address);
+      if (optionalPartner(record) && address !== record.createdBy) fail(403, 'Only the verified creator can start this fusion. Your approval is optional.');
       if (['generated', 'generating', 'preparing'].includes(record.state)) return view(record, address);
       if (!imageGenerator?.configured) fail(503, 'The artwork studio is not available yet. Your approvals are saved.');
-      if (record.state !== 'approved') fail(409, 'Both holders must approve this invitation before generation.');
+      if (record.state !== 'approved') fail(409, optionalPartner(record) ? 'This fusion is not ready for generation.' : 'Both holders must approve this invitation before generation.');
       if (record.artDirectionHash !== artDirection.hash) fail(409, 'This invitation uses an older art direction. Create a new invitation before generating.');
       checkQuota(record);
       await validate(record);
@@ -149,14 +159,17 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     create(address, input) { return serial(async () => {
       if (!input || !tokenIdValid(input.parentA) || !tokenIdValid(input.parentB)) fail(400, 'Enter both numeric token IDs from the OpenSea URLs.');
       if (input.parentA === input.parentB) fail(400, 'Choose two different Chogs.');
+      if (input.requirePartnerApproval !== undefined && typeof input.requirePartnerApproval !== 'boolean') fail(400, 'Choose whether partner approval is required.');
+      const requirePartnerApproval = input.requirePartnerApproval !== false;
       if (store.activeCount(address, now()) >= 20 || store.activeCount(null, now()) >= 1000) fail(429, 'Too many active invitations. Cancel an existing invitation before creating another.');
       const snapshot = await owners([input.parentA, input.parentB]);
       const [ownerA, ownerB] = snapshot.owners.map(value => value.toLowerCase());
       if (ownerA !== address) fail(403, 'Parent A must belong to your verified wallet.');
-      if (ownerA === ownerB) fail(400, 'Choose a partner Chog held by a different wallet.');
+      if (requirePartnerApproval && ownerA === ownerB) fail(400, 'Choose a partner Chog held by a different wallet, or make partner approval optional.');
       const createdAt = now();
       const record = {
-        id: randomBytes(32).toString('hex'), state: 'awaiting_approvals', createdBy: address, origin,
+        id: randomBytes(32).toString('hex'), state: requirePartnerApproval ? 'awaiting_approvals' : 'approved', createdBy: address, origin,
+        approvalPolicy: requirePartnerApproval ? 'both_holders' : 'creator', creatorVerifiedAt: requirePartnerApproval ? null : createdAt,
         chainId: collection.chainId, collection: collection.address, artDirection: artDirection.label,
         artDirectionHash: artDirection.hash, artDirectionSnapshot: { ...artDirection, images: undefined },
         parents: [{ tokenId: input.parentA, owner: ownerA, approval: null }, { tokenId: input.parentB, owner: ownerB, approval: null }],
@@ -178,7 +191,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       if (!valid) fail(403, 'The approval signature does not match this holder and invitation.');
       await validate(record);
       parent.approval = { signature, at: now() };
-      record.state = record.parents.every(p => p.approval) ? 'approved' : 'awaiting_approvals';
+      record.state = optionalPartner(record) || record.parents.every(p => p.approval) ? 'approved' : 'awaiting_approvals';
       store.put(record); return view(record, address);
     }); },
     recheck(id, address) { return serial(async () => {

@@ -39,6 +39,64 @@ test('generation requires both consent signatures and an invited authenticated h
   await assert.rejects(f.service.generate(r.id, address(a)), status(409));
   assert.equal(f.calls(), 0);
 });
+
+test('verified creator can fuse without extra signatures and the public record preserves absent partner approval', async () => {
+  const f = fixture(), r = await f.service.create(address(a), { parentA: '11', parentB: '22', requirePartnerApproval: false });
+  assert.equal(r.state, 'approved'); assert.equal(r.generationAvailable, true);
+  await assert.rejects(f.service.generate(r.id, address(b)), status(403));
+  await assert.rejects(f.service.generate(r.id, address(stranger)), status(403));
+  await f.service.generate(r.id, address(a)); await f.service.idle();
+  const done = f.service.get(r.id);
+  assert.equal(done.state, 'generated'); assert.equal(f.calls(), 1); assert.equal(done.approvalPolicy, 'creator');
+  assert.equal(done.parents[0].approvedAt, null); assert.equal(done.parents[1].approvedAt, null);
+  assert.ok(done.creatorVerifiedAt); assert.equal(f.service.gallery()[0].parents[1].approvedAt, null);
+});
+
+test('partner can add a policy-bound optional signature without gaining generation authority', async () => {
+  const f = fixture(), r = await f.service.create(address(a), { parentA: '11', parentB: '22', requirePartnerApproval: false });
+  const { message } = await f.service.message(r.id, address(b));
+  assert.match(message, /Partner approval optional/); assert.doesNotMatch(message, /after both listed holders approve/);
+  await assert.rejects(f.service.approve(r.id, address(b), await b.signMessage({ message: message.replace('Partner approval optional', 'Both signatures required') })), status(403));
+  const approved = await f.service.approve(r.id, address(b), await b.signMessage({ message }));
+  assert.ok(approved.parents[1].approvedAt); assert.equal(approved.state, 'approved'); assert.equal(approved.canGenerate, false);
+  await assert.rejects(f.service.generate(r.id, address(b)), status(403));
+  await f.service.generate(r.id, address(a)); await f.service.idle();
+  assert.ok(f.service.gallery()[0].parents[1].approvedAt); assert.equal(f.calls(), 1);
+});
+
+test('optional approval still blocks generation after a parent transfer during preparation', async () => {
+  const wait = deferred(), ready = deferred();
+  const f = fixture({ loadReference: async () => { ready.resolve(); await wait.promise; return { bytes: png }; } });
+  const r = await f.service.create(address(a), { parentA: '11', parentB: '22', requirePartnerApproval: false });
+  await f.service.generate(r.id, address(a)); await ready.promise; f.transfer(); wait.resolve(); await f.service.idle();
+  assert.equal(f.calls(), 0); assert.equal(f.service.get(r.id).state, 'invalidated');
+});
+
+test('optional fusions charge only the creator holder quota, leaving the reference holder quota available', async () => {
+  const f = fixture({ holderDailyLimit: 1 });
+  const first = await f.service.create(address(a), { parentA: '11', parentB: '22', requirePartnerApproval: false });
+  await f.service.generate(first.id, address(a)); await f.service.idle();
+  const next = await f.service.create(address(a), { parentA: '11', parentB: '22', requirePartnerApproval: false });
+  await assert.rejects(f.service.generate(next.id, address(a)), status(429));
+  const other = createFusionService({ ...f.config, chain: { async owners() { return { owners: [b.address, stranger.address], blockNumber: 101n }; } } });
+  const r = await other.create(address(b), { parentA: '33', parentB: '44', requirePartnerApproval: false });
+  await other.generate(r.id, address(b)); await other.idle();
+  assert.equal(other.get(r.id).state, 'generated'); assert.equal(f.calls(), 2);
+});
+
+test('optional approval policy and creator authorization survive SQLite restart', async () => {
+  const path = join(mkdtempSync(join(tmpdir(), 'chogchemy-optional-')), 'requests.sqlite');
+  const store = createSqliteFusionStore(path), f = fixture({ store });
+  const r = await f.service.create(address(a), { parentA: '11', parentB: '22', requirePartnerApproval: false });
+  store.close(); const reopened = createSqliteFusionStore(path);
+  try {
+    const service = createFusionService({ ...f.config, store: reopened });
+    assert.equal(service.get(r.id).approvalPolicy, 'creator');
+    await assert.rejects(service.generate(r.id, address(b)), status(403));
+    await service.generate(r.id, address(a)); await service.idle();
+    assert.equal(service.get(r.id).state, 'generated'); assert.equal(service.get(r.id).parents[1].approvedAt, null);
+  } finally { reopened.close(); }
+});
 test('one generation is shared by concurrent calls and subsequent reloads', async () => {
   const f = fixture(), r = await f.create();
   assert.equal(r.generationAvailable, true);

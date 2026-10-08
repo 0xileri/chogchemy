@@ -12,6 +12,6 @@ The database and generated PNGs are stored together in `/var/data/chogchemy.sqli
 
 Keep `GENERATION_DAILY_LIMIT` and `GENERATION_HOLDER_DAILY_LIMIT` low while testing. These limit request counts, not dollar spend. Set a spending budget in the provider account too. Each dispatched attempt counts, even if the provider times out. An interrupted dispatched job is marked failed after restart and will not be retried automatically. A new invitation permits a new attempt, subject to quotas.
 
-The Docker image excludes `.env`, local databases, fixture scripts and tests. Artist reference images are included intentionally when listed in `art-direction.json`. Obtain the artist's approval before adding their files. Changing the art direction requires fresh holder approvals.
+The Docker image excludes `.env`, local databases, fixture scripts and tests. Artist reference images are included intentionally when listed in `art-direction.json`. Obtain the artist's approval before adding their files. Changing the art direction requires a new fusion request and fresh signatures when both-signature mode is selected.
 
 Documentation: [Render Blueprint reference](https://render.com/docs/blueprint-spec), [persistent disks](https://render.com/docs/disks), [Docker deployment](https://render.com/docs/docker).
