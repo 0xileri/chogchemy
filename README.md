@@ -25,11 +25,11 @@ Open http://localhost:3000 in a browser with MetaMask or Rabby. For first setup,
 - One saved PNG per invitation, public ancestry links, downloads and a shared gallery. Consent, provenance and image bytes persist together in SQLite.
 - A separate sample lab with procedural placeholder art, simulated consent, and browser-local family history. Its approvals are not trusted authorization.
 
-The collection was identified through [Chog's official Linktree](https://linktr.ee/chognft) and [the linked OpenSea collection](https://opensea.io/collection/chog-genesis). Enter the on-chain token ID from the end of the OpenSea item URL; its displayed artwork number can differ. Manual lookup is available because the collection does not advertise ERC-721 enumeration in our check. Enumeration, when available, is capped at 12 tokens per refresh.
+The collection was identified through [Chog's official Linktree](https://linktr.ee/chognft) and [the linked OpenSea collection](https://opensea.io/collection/chog-genesis). Enter the on-chain token ID from the end of the OpenSea item URL; its displayed artwork number can differ. After login, automatic discovery searches the collection using batched on-chain owner reads at one block. The first scan takes a few seconds; a shared 30-second cache reduces repeated RPC work. The range is bounded by maxSupply (capped at 5,000), and the number of successful owner reads must match totalSupply before results are accepted. A changed wallet balance refreshes the cache. If discovery fails, manual lookup remains available. Up to 12 Chogs are shown per wallet; selecting a token always rechecks current ownership.
 
 ## Test with two holders
 
-1. Holder A connects and signs the login message, then enters their token ID as Parent A and another holder's token ID as Parent B.
+1. Holder A connects and signs the login message. Their Chogs are found automatically; a sole Chog is selected and fills Parent A. With several, choose one. Enter the other holder's token ID as Parent B.
 2. Create the invitation. Review both NFT links and owners, click **Review my approval**, read the complete message, check the consent box, and sign.
 3. Share the invitation link. Holder B connects and reviews/signs their own approval. For local testing, use another browser profile on the same computer. Remote sharing requires a hosted HTTPS instance.
 4. Either holder clicks **Create our character** once both approvals are saved. Parent images load first; either holder can cancel during preparation. After dispatch to the provider, generation cannot be cancelled.

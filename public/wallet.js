@@ -16,6 +16,8 @@ function clearWallet() {
   revision++; address = null;
   $('holder-tools').hidden = true; $('verified-chog').hidden = true;
   $('chog-art').replaceChildren(); $('owned-chogs').replaceChildren(); $('token-id').value = '';
+  $('manual-chog').open = false;
+  window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: '' } }));
   $('connect-wallet').textContent = 'Connect wallet'; $('connect-wallet').disabled = false;
   status('Wallet disconnected. The sample lab below is open to everyone.');
   window.dispatchEvent(new CustomEvent('chogchemy:wallet', { detail: { address: null } }));
@@ -91,18 +93,20 @@ async function refreshChogs() {
   if (!address) return;
   const attempt = ++revision;
   $('refresh-chogs').disabled = true; $('verified-chog').hidden = true;
-  $('owned-chogs').replaceChildren(); $('balance-status').textContent = 'Reading Chog Genesis on Monad…';
+  $('owned-chogs').replaceChildren(); $('balance-status').textContent = 'Finding your Chogs on Monad… This can take a few seconds.';
   try {
     if (!await contextMatches(address)) { await disconnect(); return; }
     const result = await api('/api/chogs');
     if (attempt !== revision) return;
-    $('balance-status').textContent = result.balance === '0' ? 'No Chog Genesis NFTs found in this wallet. You can still try the sample lab.' : `You own ${result.balance} Chog Genesis NFT${result.balance === '1' ? '' : 's'}. ${result.tokenIds === null ? 'Enter a token ID below to preview one.' : 'Choose a token to check its current ownership.'}`;
+    $('manual-chog').open = result.tokenIds === null;
+    $('balance-status').textContent = result.balance === '0' ? 'No Chog Genesis NFTs found in this wallet. You can still try the sample lab.' : `You own ${result.balance} Chog Genesis NFT${result.balance === '1' ? '' : 's'}. ${result.tokenIds === null ? 'Automatic discovery is temporarily unavailable. You can enter a token ID below.' : !result.tokenIds.length ? 'Your holdings may have just changed. Refresh in a moment or use manual lookup.' : result.tokenIds.length === 1 && result.balance === '1' ? 'Found your Chog automatically.' : 'Choose your Chog below.'}`;
     for (const tokenId of result.tokenIds || []) {
       const button = document.createElement('button'); button.type = 'button'; button.textContent = `Chog #${tokenId}`;
       button.addEventListener('click', () => { $('token-id').value = tokenId; void lookup(); }); $('owned-chogs').append(button);
     }
     if (result.tokenIds?.length === result.limit && BigInt(result.balance) > BigInt(result.limit)) $('balance-status').textContent += ` Showing the first ${result.limit}; look up others by ID.`;
-    status('Wallet verified. Ownership is checked again whenever you look up a Chog.');
+    status('Wallet verified. Select a Chog to use it as Parent A.');
+    if (result.balance === '1' && result.tokenIds?.length === 1) { $('token-id').value = result.tokenIds[0]; await lookup(); }
   } catch (error) { if (attempt === revision) { $('balance-status').textContent = ''; status(error.message); } }
   finally { $('refresh-chogs').disabled = false; }
 }

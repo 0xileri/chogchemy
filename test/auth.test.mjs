@@ -53,6 +53,16 @@ test('wallet address alone cannot access holder APIs', async () => {
   assert.equal((await f.request('/api/chog?id=1557')).status, 401);
   assert.equal(f.calls(), 0);
 });
+
+test('automatic discovery returns only the signed-in wallet inventory and keeps manual lookup if discovery fails', async () => {
+  const f = fixture({ async ownedTokenIds(address, balance) { assert.equal(address, owner.address.toLowerCase()); assert.equal(balance, 1n); return ['1557']; } });
+  const { cookie } = await f.login();
+  assert.deepEqual((await f.request(`/api/chogs?address=${stranger.address}`, { cookie })).body.tokenIds, ['1557']);
+  const unavailable = fixture({ async ownedTokenIds() { throw new Error('index unavailable'); } });
+  const session = await unavailable.login();
+  const result = await unavailable.request('/api/chogs', { cookie: session.cookie });
+  assert.equal(result.status, 200); assert.equal(result.body.balance, '1'); assert.equal(result.body.tokenIds, null);
+});
 test('a stranger cannot sign the owner challenge', async () => {
   const f = fixture();
   const challenge = await f.request('/api/auth/challenge', { method: 'POST', data: { address: owner.address } });
