@@ -1,6 +1,12 @@
 # Deploy Chogchemy
 
-The app supports one Docker web service on Railway or Render with persistent storage. No deployment has been completed yet. Review the account's plan and usage charges before creating paid resources.
+Chogchemy is live at [chogchemy.up.railway.app](https://chogchemy.up.railway.app), deployed to Railway on 2026-10-11 from the private GitHub repository `0xileri/chogchemy` (branch `main`). Pushes to `main` deploy automatically.
+
+The Railway project is **Chogchemy**, with one **chogchemy** service in its production environment. It uses the existing Dockerfile, port `10000`, a `/healthz` health check, one replica in US West, and the **chogchemy-volume** mounted at `/var/data`. SQLite invitations and generated artwork persist at `/var/data/chogchemy.sqlite`. The service has maximum resource settings of 0.5 vCPU and 0.5 GB memory; serverless sleeping is disabled.
+
+The approved hosting budget is $10/month, excluding Orbio costs and other projects. Resource limits reduce exposure but do not enforce a dollar spending cap. Railway's hard compute spending limit applies to the entire workspace, so it was not changed: that could interrupt unrelated projects. Review this project's Usage page and the workspace bill as traffic grows; the initial $0.00 estimate is too early to establish a monthly forecast.
+
+Live checks passed for HTTPS health, the exact canonical origin, homepage and branding assets, secure wallet sign-in with an ephemeral test wallet, Monad holdings lookup, and a real Chog NFT artwork preview. Private environment/database paths return 404. The Orbio key is stored in Railway variables; deployment verification did not dispatch a paid AI generation request. Local artwork and invitations have not been migrated to the new volume.
 
 ## Railway
 
@@ -22,7 +28,7 @@ The app supports one Docker web service on Railway or Render with persistent sto
    | `PORT` | `10000` |
 
    The Dockerfile already sets `NODE_ENV=production` and `HOST=0.0.0.0`. Do not copy the local `.env` wholesale or use a localhost origin in production.
-5. Review billing and set a hosting usage limit, then deploy. Hobby includes $5 of monthly resource usage in its $5 subscription; usage above that is additional. Full trials have outbound access; limited trials may block the Monad RPC and image provider. Confirm your account's current terms and limits in the dashboard.
+5. Review billing and any available usage controls, then deploy. Check whether a spending limit applies to the project or the entire workspace before changing it. Hobby includes $5 of monthly resource usage in its $5 subscription; usage above that is additional. Full trials have outbound access; limited trials may block the Monad RPC and image provider. Confirm your account's current terms and limits in the dashboard.
 6. Verify `/healthz`, `/api/config` (the returned origin must match the public URL), branding assets, then wallet sign-in and the real-holder testing steps in README.md. Image generation is billed separately by Orbio.
 
 The volume starts empty. Local invitations and artwork are not included in the Docker image or copied automatically. Preserve a database backup if migrating existing records.

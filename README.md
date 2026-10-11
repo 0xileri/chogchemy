@@ -2,6 +2,8 @@
 
 Create a character from your Chog and another Chog, with optional partner approval, artist style references, and ancestry linked to the original NFTs. Built for Chogathon.
 
+Live website: [chogchemy.up.railway.app](https://chogchemy.up.railway.app). Open it in a browser with MetaMask or Rabby to connect your holder wallet.
+
 ## Run locally
 
 Use Node 24 (minimum 22.13) for native SQLite support.
@@ -70,7 +72,7 @@ Image bytes can be checked against their SHA-256 digest, but the server/database
 
 ## Hosting and team
 
-See [DEPLOY.md](DEPLOY.md). The existing `Dockerfile` supports Railway with service settings configured in its dashboard, or Render using `render.yaml`. Both need one web service with persistent storage and `/healthz`. Review hosting charges before creating paid resources. No deployment has been completed yet.
+See [DEPLOY.md](DEPLOY.md) for the live Railway deployment, verification and budget notes. The existing `Dockerfile` also supports Render using `render.yaml`. Both need one web service with persistent storage and `/healthz`. The Railway volume starts with no local artwork or invitations; wallet sessions must be renewed after deployments.
 
 - Developer: wallet and ownership checks, consent, image integration, persistence and hosting.
 - Comic artist: original style guide, approved reference drawings, sample fusions and output review.
