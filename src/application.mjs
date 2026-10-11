@@ -5,10 +5,12 @@ import { collection, createChain } from './chain.mjs';
 import { createFusionService, FusionError } from './fusions.mjs';
 import { createMemoryFusionStore } from './fusion-store.mjs';
 import { createChogPreviews } from './chog-previews.mjs';
+import { renderCharacterPage, renderCharacterNotFound } from './character-page.mjs';
 
 const staticFiles = {
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
+  '/character.js': ['character.js', 'text/javascript'], '/share.js': ['share.js', 'text/javascript'],
   '/brand/chogchemy-logo-v1.png': ['../assets/brand/chogchemy-logo-v1.png', 'image/png'],
   '/brand/chogchemy-icon-v1.png': ['../assets/brand/chogchemy-icon-v1.png', 'image/png'],
   '/brand/chogchemy-banner-v1.png': ['../assets/brand/chogchemy-banner-v1.png', 'image/png'],
@@ -44,6 +46,18 @@ export function createApplication({ chain = createChain(), fusionStore = createM
     try {
       const url = new URL(req.url, appOrigin);
       if (url.pathname === '/healthz' && req.method === 'GET') { send(res, 200, { ok: true }); return; }
+      if (url.pathname.startsWith('/characters/') && ['GET', 'HEAD'].includes(req.method)) {
+        const match = url.pathname.match(/^\/characters\/([a-f0-9]{64})$/);
+        let request = null;
+        if (match) {
+          try { request = fusions.get(match[1]); }
+          catch (error) { if (!(error instanceof FusionError && error.status === 404)) throw error; }
+        }
+        const found = request?.state === 'generated' && Boolean(request.artwork);
+        const data = Buffer.from(found ? renderCharacterPage(request, appOrigin) : renderCharacterNotFound(appOrigin));
+        res.writeHead(found ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': data.length, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin' });
+        res.end(req.method === 'HEAD' ? undefined : data); return;
+      }
       const artworkRoute = url.pathname.match(/^\/artwork\/([a-f0-9]{64})\.png$/);
       if (artworkRoute && ['GET', 'HEAD'].includes(req.method)) {
         const bytes = fusions.artwork(artworkRoute[1]);

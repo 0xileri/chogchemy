@@ -15,7 +15,7 @@ const chain = {
   async ownedTokenIds(address) { return [ids[accounts.findIndex(a => a.address.toLowerCase() === address)]]; },
   async token(id) { return { owner: (await this.owners([id])).owners[0], tokenURI: 'data:application/json,' + encodeURIComponent(JSON.stringify({ name: `Test Chog #${id}`, image: `data:image/png;base64,${fixtureArt(id === '22').toString('base64')}`, attributes: [{ trait_type: 'Fixture', value: 'Synthetic NFT for browser tests' }] })) }; },
 };
-const fixturePng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5H0AAAAASUVORK5CYII=', 'base64');
+const fixturePng = fixtureArt(true);
 const app = createApplication({ chain, origin, generationOptions: {
   loadReference: async (_, tokenId) => ({ tokenId, bytes: fixturePng, mime: 'image/png', name: 'Synthetic parent', traits: [] }),
   imageGenerator: { configured: true, mode: 'fixture', model: 'synthetic-test', async generate() { return { bytes: fixturePng, mode: 'fixture', model: 'synthetic-test' }; } },

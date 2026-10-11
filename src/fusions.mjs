@@ -75,6 +75,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       createdAt: record.createdAt, expires: record.expires, checkedAt: record.checkedAt, checkedBlock: record.checkedBlock,
       artDirection: record.artDirection, collection: { address: record.collection, chainId: record.chainId },
       invitationUrl: `${record.origin}/?fusion=${record.id}#fusion`,
+      characterUrl: record.state === 'generated' && record.artwork ? `${record.origin}/characters/${record.id}` : null,
       yourRole: address ? record.parents.findIndex(p => p.owner === address) : -1,
       generationAvailable: Boolean(imageGenerator?.configured && record.artDirectionHash === artDirection.hash && record.state === 'approved'),
       generation: record.generation ? { error: record.generation.error || null, startedAt: record.generation.providerStartedAt || null } : null,

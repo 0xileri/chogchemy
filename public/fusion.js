@@ -1,4 +1,5 @@
 import { api, getWalletAddress, signWalletMessage, getChogPreview } from './wallet.js';
+import { shareOrCopy } from './share.js';
 
 const $ = id => document.getElementById(id);
 let current = null, message = null, operation = 0, busy = false, poll = null;
@@ -82,6 +83,7 @@ function render(request) {
   if (request.artwork) {
     $('generated-image').src = request.artwork.url;
     $('download-artwork').href = request.artwork.url;
+    $('view-character').href = request.characterUrl;
     $('artwork-caption').textContent = `${request.artwork.mode === 'fixture' ? 'TEST ARTWORK · Synthetic output' : 'AI character artwork'} · Parents #${request.parents.map(p => p.tokenId).join(' + #')} · ${approvalSummary(request)} · ${request.artDirection}. An artwork record; no NFT has been minted.`;
     void gallery();
   }
@@ -194,7 +196,7 @@ async function gallery() {
     const data = await api('/api/gallery');
     $('live-gallery').replaceChildren();
     for (const request of data.artworks) {
-      const card = document.createElement('a'); card.className = 'gallery-card'; card.href = request.invitationUrl;
+      const card = document.createElement('a'); card.className = 'gallery-card'; card.href = request.characterUrl;
       const image = document.createElement('img'); image.src = request.artwork.url; image.loading = 'lazy'; image.alt = `Character from Chogs ${request.parents.map(p => p.tokenId).join(' and ')}`;
       const label = document.createElement('p'); label.textContent = `${request.artwork.mode === 'fixture' ? 'TEST · ' : ''}#${request.parents[0].tokenId} + #${request.parents[1].tokenId}`;
       const approval = document.createElement('p'); approval.textContent = approvalSummary(request);
@@ -204,6 +206,13 @@ async function gallery() {
   } catch { $('live-gallery').textContent = 'The gallery is temporarily unavailable.'; }
 }
 void gallery();
+$('share-finished-character').addEventListener('click', async () => {
+  const url = current?.characterUrl;
+  if (!url) return;
+  const result = await shareOrCopy(url, 'Meet a new Chogchemy character');
+  if (current?.characterUrl !== url) return;
+  status(({ shared: 'Character shared.', copied: 'Public character link copied.', cancelled: 'Sharing cancelled.', manual: 'Open the character page to select and copy its public link.' })[result]);
+});
 $('copy-invitation').addEventListener('click', async () => {
   if (!current) return;
   try { await navigator.clipboard.writeText(current.invitationUrl); status('Invitation link copied.'); }
