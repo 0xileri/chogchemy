@@ -91,12 +91,21 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       canGenerateComic: Boolean(address === record.createdBy && record.state === 'generated' && imageGenerator?.configured && (!record.comic || ['ready', 'cancelled'].includes(record.comic.state))),
     };
   }
-  function checkQuota(record, checkConcurrency = true, kind = 'fusion') {
+  function quotaUsage() {
     const records = store.all().filter(r => r.origin === origin);
-    const occupied = records.reduce((count, r) => count + Number(['preparing', 'generating'].includes(r.state)) + Number(['preparing', 'generating'].includes(r.comic?.state)), 0);
-    if (checkConcurrency && occupied >= concurrency) fail(429, 'The studio is busy. Try again after another artwork finishes.');
     const day = Math.floor(now() / 86400000) * 86400000;
     const attempts = records.flatMap(r => [...(r.generation?.providerStartedAt >= day ? [{ holders: quotaHolders(r) }] : []), ...(r.comic?.providerStartedAt >= day ? [{ holders: [r.createdBy] }] : [])]);
+    return { records, day, attempts };
+  }
+  function usage(address) {
+    const { day, attempts } = quotaUsage();
+    const used = attempts.filter(a => a.holders.includes(address)).length;
+    return { used, limit: holderDailyLimit, remaining: Math.max(0, holderDailyLimit - used), globalRemaining: Math.max(0, dailyLimit - attempts.length), resetsAt: day + 86400000 };
+  }
+  function checkQuota(record, checkConcurrency = true, kind = 'fusion') {
+    const { records, attempts } = quotaUsage();
+    const occupied = records.reduce((count, r) => count + Number(['preparing', 'generating'].includes(r.state)) + Number(['preparing', 'generating'].includes(r.comic?.state)), 0);
+    if (checkConcurrency && occupied >= concurrency) fail(429, 'The studio is busy. Try again after another artwork finishes.');
     const holders = kind === 'comic' ? [record.createdBy] : quotaHolders(record);
     if (attempts.length >= dailyLimit || holders.some(holder => attempts.filter(a => a.holders.includes(holder)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
   }
@@ -145,6 +154,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
   }
   const comics = createFamilyComicService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   return {
+    usage,
     generateComic: comics.generate,
     cancelComic: comics.cancel,
     comicArtwork: comics.artwork,

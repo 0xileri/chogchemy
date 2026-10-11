@@ -111,6 +111,7 @@ export function createApplication({ chain = createChain(), fusionStore = createM
       const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate|comic|cancel-comic))?$/);
       if (req.method === 'GET' && fusionRoute && !fusionRoute[2]) { send(res, 200, fusions.get(fusionRoute[1], session?.address)); return; }
       if (!session) { send(res, 401, { error: 'Connect and verify your wallet first.' }); return; }
+      if (req.method === 'GET' && url.pathname === '/api/drawing-usage') { send(res, 200, fusions.usage(session.address)); return; }
       if (['GET', 'HEAD'].includes(req.method) && ['/api/chog-preview', '/api/chog-image'].includes(url.pathname)) {
         const tokenId = url.searchParams.get('id');
         if (!validTokenId(tokenId)) { send(res, 400, { error: 'Enter a valid numeric token ID.' }); return; }

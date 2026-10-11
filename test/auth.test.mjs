@@ -54,6 +54,18 @@ test('wallet address alone cannot access holder APIs', async () => {
   assert.equal(f.calls(), 0);
 });
 
+test('drawing allowance is private to the signed-in wallet and resets at the next UTC day', async () => {
+  const f = fixture();
+  assert.equal((await f.request('/api/drawing-usage')).status, 401);
+  const { cookie } = await f.login();
+  const response = await f.request(`/api/drawing-usage?address=${stranger.address}`, { cookie });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.deepEqual(Object.keys(response.body).sort(), ['globalRemaining', 'limit', 'remaining', 'resetsAt', 'used']);
+  assert.equal(response.body.used, 0); assert.equal(response.body.remaining, response.body.limit);
+  assert.equal(response.body.resetsAt % 86400000, 0);
+});
+
 test('automatic discovery returns only the signed-in wallet inventory and keeps manual lookup if discovery fails', async () => {
   const f = fixture({ async ownedTokenIds(address, balance) { assert.equal(address, owner.address.toLowerCase()); assert.equal(balance, 1n); return ['1557']; } });
   const { cookie } = await f.login();

@@ -60,6 +60,21 @@ test('duplicate concurrent comic requests dispatch once and never replace either
   assert.deepEqual(f.service.comicArtwork(child.id), comicPng);
 });
 
+test('visible drawing allowance counts the child and failed comic, scopes holders, and resets with enforcement', async () => {
+  const f = fixture({ holderDailyLimit: 4, dailyLimit: 5 }), child = await f.child();
+  assert.equal(f.service.usage(address(a)).used, 1);
+  assert.equal(f.service.usage(address(a)).remaining, 3);
+  assert.equal(f.service.usage(address(b)).used, 0);
+  f.config.imageGenerator.generate = async () => { throw new Error('Ambiguous provider failure'); };
+  await f.service.generateComic(child.id, address(a)); await f.service.idle();
+  const usage = f.service.usage(address(a));
+  assert.equal(usage.used, 2); assert.equal(usage.remaining, 2); assert.equal(usage.globalRemaining, 3);
+  assert.equal(usage.resetsAt, Date.UTC(2026, 9, 12));
+  f.advance(86400000);
+  assert.equal(f.service.usage(address(a)).remaining, 4);
+  assert.equal(f.service.usage(address(a)).globalRemaining, 5);
+});
+
 test('finished families can create a comic after the invitation deadline but parent transfers prevent it', async () => {
   const f = fixture(), child = await f.child(); f.advance(86400001);
   await f.service.generateComic(child.id, address(a)); await f.service.idle();

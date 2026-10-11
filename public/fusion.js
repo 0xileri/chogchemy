@@ -3,10 +3,32 @@ import { shareOrCopy } from './share.js';
 
 const $ = id => document.getElementById(id);
 let current = null, message = null, operation = 0, busy = false, poll = null, comicAction = null;
+let drawingUsage = null, usagePending = null, choosingNew = false;
 const status = text => { $('fusion-status').textContent = text; };
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const active = request => ['awaiting_approvals', 'approved'].includes(request.state) && request.expires > Date.now();
 const optionalPartner = request => request.approvalPolicy === 'creator';
+const creationState = request => request.comic?.artwork ? 'Child + comic saved' : request.artwork ? ['preparing', 'generating'].includes(request.comic?.state) ? 'Child saved · Comic drawing' : request.comic?.state === 'failed' ? 'Child saved · Comic failed' : 'Child saved · Comic not created' : ({ approved: 'Ready to create the child', awaiting_approvals: 'Waiting for approval', preparing: 'Preparing the child', generating: 'Drawing the child', generation_failed: 'Child drawing failed', cancelled: 'Cancelled', expired: 'Expired', invalidated: 'Parent ownership changed' })[request.state] || 'Work in progress';
+const resetTime = () => new Date(drawingUsage?.resetsAt || (Math.floor(Date.now() / 86400000) + 1) * 86400000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+function budgetText() {
+  if (!drawingUsage) return '';
+  if (!drawingUsage.remaining || !drawingUsage.globalRemaining) return `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.`;
+  return `${drawingUsage.remaining} of ${drawingUsage.limit} drawing requests left today. Creating a child uses one; creating its comic uses another.`;
+}
+async function refreshUsage() {
+  const address = getWalletAddress(); if (!address) return;
+  if (usagePending?.address === address) return usagePending.promise;
+  const pending = { address, promise: null };
+  pending.promise = (async () => {
+    try {
+      const data = await api('/api/drawing-usage');
+      if (getWalletAddress() !== address || usagePending !== pending) return;
+      drawingUsage = data; controls();
+    } catch { if (getWalletAddress() === address && usagePending === pending) { drawingUsage = null; controls(); } }
+    finally { if (usagePending === pending) usagePending = null; }
+  })();
+  usagePending = pending; return pending.promise;
+}
 function approvalSummary(request) {
   if (!optionalPartner(request)) return request.parents.every(p => p.approvedAt) ? 'Both holders signed' : 'Both holder signatures required';
   if (request.parents.every(p => p.owner === request.createdBy)) return 'Creator verified · Both Chogs owned';
@@ -37,6 +59,20 @@ function previewParent(side, immediate = false) {
 function resetMessage() { message = null; $('approval-review').hidden = true; $('approval-confirm').checked = false; $('sign-fusion').disabled = true; }
 function controls() {
   const address = getWalletAddress(), role = current?.parents.findIndex(p => p.owner === address) ?? -1;
+  const atLimit = !!drawingUsage && (!drawingUsage.remaining || !drawingUsage.globalRemaining);
+  const step = !address ? 'connect' : current?.artwork ? 'comic' : 'child';
+  for (const name of ['connect', 'child', 'comic']) $('step-' + name).setAttribute('aria-current', step === name ? 'step' : 'false');
+  $('step-comic').href = current?.artwork ? '#family-comic-studio' : '#fusion';
+  $('saved-wallet-hint').hidden = !!address;
+  $('parent-picker').hidden = !!current;
+  $('start-new-family').hidden = !address || !current;
+  $('start-new-family').disabled = busy;
+  $('drawing-usage').hidden = !address;
+  $('drawing-remaining').textContent = drawingUsage ? `${drawingUsage.remaining} drawing request${drawingUsage.remaining === 1 ? '' : 's'} left today` : 'Checking your drawing allowance…';
+  $('drawing-usage-note').textContent = drawingUsage ? `${drawingUsage.used} of ${drawingUsage.limit} used. One request per child or comic. Resets ${resetTime()} (your local time).${!drawingUsage.globalRemaining ? ' The studio-wide daily limit is also used up.' : ''}` : 'Your allowance appears here after wallet verification.';
+  for (const id of ['child-budget', 'comic-budget']) { $(id).hidden = !address || !drawingUsage; $(id).textContent = budgetText(); }
+  $('child-budget').hidden ||= current?.state !== 'approved';
+  $('comic-budget').hidden ||= !current?.canGenerateComic;
   $('create-fusion').disabled = busy || !address;
   $('change-chog').disabled = busy;
   $('refresh-invitation').disabled = busy;
@@ -51,10 +87,10 @@ function controls() {
   $('wallet-hint').hidden = !!address;
   $('my-invitations').hidden = !address;
   $('generate-artwork').hidden = !current?.generationAvailable || !current?.canGenerate || !address || role < 0 || (optionalPartner(current) && address !== current.createdBy);
-  $('generate-artwork').disabled = busy;
-  $('generate-comic').hidden = !current?.canGenerateComic;
-  $('generate-comic').disabled = busy;
-  $('generate-comic').textContent = comicAction === 'generate' ? 'Checking your family…' : 'Create our family comic ✳';
+  $('generate-artwork').disabled = busy || atLimit;
+  $('generate-comic').hidden = !current?.canGenerateComic || !address;
+  $('generate-comic').disabled = busy || atLimit;
+  $('generate-comic').textContent = comicAction === 'generate' ? 'Checking your family…' : current?.comic?.state === 'ready' ? 'Try drawing the comic again ✳' : 'Create the family comic ✳';
   $('cancel-comic').hidden = current?.comic?.state !== 'preparing' || address !== current?.createdBy;
   $('cancel-comic').disabled = busy;
   if (current?.state === 'preparing' && role >= 0) $('cancel-invitation').hidden = false;
@@ -63,12 +99,12 @@ function render(request) {
   if (current?.id !== request.id) comicError('');
   current = request; resetMessage(); $('invitation-card').hidden = false;
   $('invitation-link').value = request.invitationUrl;
-  $('invitation-state').textContent = ({ awaiting_approvals: 'Waiting for both holders', approved: optionalPartner(request) ? 'Ready to create' : 'Both holders approved', preparing: 'Preparing parent artwork', generating: 'Creating your new character…', generated: 'Meet your new character.', generation_failed: 'Artwork could not be saved', cancelled: 'Cancelled', invalidated: 'Ownership changed', expired: 'Expired' })[request.state] || request.state;
-  $('invitation-approval-policy').textContent = `${approvalSummary(request)}.${optionalPartner(request) ? ' Only the creator can start this fusion.' : ''}`;
+  $('invitation-state').textContent = creationState(request);
+  $('invitation-approval-policy').textContent = request.artwork ? `Child created from Chogs #${request.parents.map(p => p.tokenId).join(' and #')}.` : optionalPartner(request) ? 'The parents are checked. You can create the child without an extra partner signature.' : request.state === 'approved' ? 'Both holders approved. You can create the child.' : 'Both holders need to approve before the child can be drawn.';
   $('invitation-parents').replaceChildren();
   for (const [index, parent] of request.parents.entries()) {
     const card = document.createElement('article');
-    const label = document.createElement('span'); label.className = 'eyebrow'; label.textContent = `PARENT ${index === 0 ? 'A' : 'B'}`;
+    const label = document.createElement('span'); label.className = 'eyebrow'; label.textContent = index === 0 ? 'FIRST PARENT' : 'SECOND PARENT';
     const title = document.createElement('h3'); title.textContent = `Token #${parent.tokenId}`;
     const holder = document.createElement('p'); holder.textContent = `Holder ${short(parent.owner)}`; holder.title = parent.owner;
     const approval = document.createElement('p'); approval.className = 'approval-state'; approval.textContent = parent.approvedAt ? 'Signed approval' : optionalPartner(request) ? (parent.owner === request.createdBy ? 'Creator wallet and ownership verified' : 'Partner has not signed · Approval optional') : 'Awaiting signed approval';
@@ -85,16 +121,22 @@ function render(request) {
   $('invitation-style-hash').textContent = request.artDirectionHash ? `Art direction hash ${request.artDirectionHash}` : '';
   $('ownership-check').textContent = `Ownership last checked ${new Date(request.checkedAt).toLocaleString()} at Monad block ${request.checkedBlock}.`;
   $('ready-note').hidden = request.state !== 'approved';
-  $('ready-note').textContent = request.generation?.error || (request.generationAvailable ? 'Ready to create. Ownership is checked again before drawing.' : 'Your fusion is saved. The artwork studio is not available for this invitation yet.');
+  $('ready-note').textContent = request.generation?.error || (request.generationAvailable ? 'These are the two parents. Click “Create the child” to draw and save their new character.' : 'This creation cannot start drawing yet. Try a new creation if it uses an older art style.');
   $('generation-note').hidden = !['preparing', 'generating', 'generation_failed'].includes(request.state);
-  $('generation-note').textContent = request.generation?.error || (request.state === 'preparing' ? 'Loading the two parent images. Either holder can still cancel during preparation.' : 'The studio is drawing. This can take a few minutes; you can leave and return to this link.');
+  $('generation-note').textContent = request.generation?.error || (request.state === 'preparing' ? 'Preparing the two parents for drawing. You can still cancel.' : 'Drawing the child. This can take a few minutes. Find it later in My creations.');
+  $('child-next').hidden = !request.artwork;
+  const comicDrawing = ['preparing', 'generating'].includes(request.comic?.state);
+  $('child-next-title').textContent = request.comic?.artwork ? 'Your child and comic are saved.' : comicDrawing ? 'Your comic is being drawn.' : 'Next: create the family comic.';
+  $('child-next-note').textContent = request.comic?.artwork ? 'Open or download your comic in step 3 below.' : comicDrawing ? 'The child is saved. Your comic will appear below when it is ready.' : 'The child is one artwork. The comic is a separate drawing you start in step 3.';
+  $('next-comic').textContent = request.comic?.artwork ? 'See my comic ↓' : comicDrawing ? 'Check comic progress ↓' : 'Go to the comic ↓';
   $('generated-result').hidden = !request.artwork;
   if (request.artwork) {
     $('generated-image').src = request.artwork.url;
     $('download-artwork').href = request.artwork.url;
     $('view-character').href = request.characterUrl;
-    $('artwork-caption').textContent = `${request.artwork.mode === 'fixture' ? 'TEST ARTWORK · Synthetic output' : 'AI character artwork'} · Parents #${request.parents.map(p => p.tokenId).join(' + #')} · ${approvalSummary(request)}. An artwork record; no NFT has been minted.`;
+    $('artwork-caption').textContent = `${request.artwork.mode === 'fixture' ? 'TEST ARTWORK · Synthetic output' : 'Saved child artwork'} · Parents #${request.parents.map(p => p.tokenId).join(' + #')}. Artwork only; no new NFT minted.`;
     void gallery();
+    void listMine();
   }
   renderComic(request);
   clearTimeout(poll);
@@ -102,6 +144,7 @@ function render(request) {
   const address = getWalletAddress();
   $('invitation-role').textContent = !address ? 'Connect the wallet holding either parent to review and sign.' : request.parents.some(p => p.owner === address) ? 'This wallet is one of the two invited holders.' : 'This wallet is not one of the invited holders. Switch to the wallet holding a listed parent.';
   controls();
+  void refreshUsage();
 }
 function comicError(text) {
   $('comic-error').textContent = text;
@@ -111,8 +154,8 @@ function renderComic(request) {
   $('family-comic-studio').hidden = !request.artwork;
   const comic = request.comic;
   $('comic-result').hidden = !comic?.artwork;
-  $('comic-status').textContent = comic?.error || ({ preparing: 'Preparing the parents and saved child artwork…', generating: 'Drawing your family comic. You can leave and return to this link.', generated: 'Your first family story is saved.', cancelled: 'Preparation cancelled. You can create the comic when ready.' })[comic?.state] || 'Ready for your family’s first story.';
-  $('comic-access').textContent = comic?.artwork ? 'Fictional character story requested by the verified creator. Fusion approvals apply to the original child artwork.' : getWalletAddress() === request.createdBy ? 'One optional image-generation request, counted toward your daily artwork limit. Ownership is checked again before drawing.' : 'The original creator can connect their wallet to create this family comic.';
+  $('comic-status').textContent = comic?.error || ({ preparing: 'Preparing the parents and saved child artwork… No comic is saved yet.', generating: 'Drawing your family comic. It will appear here when finished. You can also return through My creations.', generated: 'Comic saved. Download it or open your family page below.', cancelled: 'Preparation cancelled. No comic is saved yet.' })[comic?.state] || 'No comic yet. Click “Create the family comic” to draw it.';
+  $('comic-access').textContent = comic?.artwork ? 'A fictional character story. Your original NFTs stay in their wallets.' : getWalletAddress() === request.createdBy ? 'Uses one drawing request. The saved child is used as the comic’s child character.' : 'Connect the wallet that created this child to draw its comic.';
   $('comic-record').hidden = !comic;
   $('comic-record-text').textContent = comic ? `Requested ${new Date(comic.requestedAt).toLocaleString()} · Ownership checked ${new Date(comic.checkedAt).toLocaleString()} · Monad block ${comic.checkedBlock} · Style ${comic.styleLabel} · Style hash ${comic.styleHash} · Child SHA-256 ${comic.childDigest}${comic.artwork ? ` · Comic SHA-256 ${comic.artwork.digest}` : ''}` : '';
   if (comic?.artwork) {
@@ -149,7 +192,7 @@ async function load(id, updateUrl = false) {
     if (attempt !== operation) return;
     render(request);
     if (updateUrl) { const url = new URL(location.href); url.searchParams.set('fusion', request.id); url.hash = 'fusion'; history.replaceState(null, '', url); }
-    status(request.state === 'approved' ? 'Your fusion is ready. Review the parents and studio options below.' : 'Invitation loaded. Review the parents and status below.');
+    status(request.artwork ? request.comic?.artwork ? 'Your child and comic are saved below.' : 'Your child is saved. Continue to step 3 to create its comic.' : request.state === 'approved' ? 'Parents checked. Click “Create the child” below.' : 'Creation opened. Check its progress below.');
   } catch (error) { if (attempt === operation) { current = null; $('invitation-card').hidden = true; status(error.message); controls(); } }
 }
 async function listMine() {
@@ -162,11 +205,15 @@ async function listMine() {
     for (const request of data.requests) {
       const link = document.createElement('a'); link.className = 'invitation-item';
       link.href = request.invitationUrl;
-      link.textContent = `#${request.parents[0].tokenId} + #${request.parents[1].tokenId} · ${request.state.replaceAll('_', ' ')}`;
-      link.addEventListener('click', event => { event.preventDefault(); void load(request.id, true); });
+      const title = document.createElement('strong'); title.textContent = `Chogs #${request.parents[0].tokenId} + #${request.parents[1].tokenId}`;
+      const state = document.createElement('span'); state.textContent = creationState(request);
+      const action = document.createElement('span'); action.className = 'saved-action'; action.textContent = request.comic?.artwork ? 'Open child & comic ↗' : request.comic?.state === 'failed' ? 'Open child / View comic error ↗' : request.artwork ? 'Open child / Create comic ↗' : 'Continue creation ↗';
+      link.append(title, state, action);
+      link.addEventListener('click', event => { event.preventDefault(); if (busy) return; choosingNew = false; void load(request.id, true).then(() => (current?.artwork ? $('child-next') : $('invitation-card')).scrollIntoView({ behavior: 'smooth' })); });
       $('invitation-list').append(link);
     }
-    if (!data.requests.length) $('invitation-list').textContent = 'No invitations for this wallet yet.';
+    if (!data.requests.length) $('invitation-list').textContent = 'No saved creations yet. Choose two parents below to begin.';
+    if (!current && !choosingNew && !new URL(location.href).searchParams.has('fusion') && data.requests.length && !busy) await load(data.requests[0].id, true);
   } catch (error) { if (getWalletAddress() === address) $('invitation-list').textContent = error.message; }
 }
 async function perform(work, familyAction = null) {
@@ -178,29 +225,39 @@ async function perform(work, familyAction = null) {
   const attempt = operation;
   try { await work(); }
   catch (error) {
-    const errorText = error.status === 401 ? 'Your wallet session expired. Connect and sign in again, then create your family comic.' : error.message;
+    const errorText = error.status === 401 ? 'Your wallet session expired. Connect and sign in again, then create your family comic.' : /daily artwork limit/i.test(error.message) ? `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.` : error.message;
     // A 401 clears the wallet and advances operation; still explain it beside this comic.
     if (familyAction && current?.id === comicId && (attempt === operation || (error.status === 401 && !getWalletAddress()))) comicError(errorText);
     if (attempt === operation) {
       if (error.status === 409 && current) await load(current.id);
-      status(error.code === 4001 ? 'Approval cancelled in your wallet. Nothing was signed or saved.' : error.message);
+      status(error.code === 4001 ? 'Approval cancelled in your wallet. Nothing was signed or saved.' : errorText);
     }
   }
-  finally { busy = false; comicAction = null; controls(); }
+  finally { busy = false; comicAction = null; controls(); void refreshUsage(); }
 }
 $('new-fusion').addEventListener('submit', event => {
   event.preventDefault();
   void perform(async () => {
     if (!getWalletAddress()) throw new Error('Connect your wallet to create an invitation.');
+    choosingNew = false;
     const attempt = operation;
     status('Checking both parents on Monad…');
     const request = await api('/api/fusions', { parentA: $('fusion-parent-a').value.trim(), parentB: $('fusion-parent-b').value.trim(), requirePartnerApproval: $('require-partner-approval').checked });
     if (attempt !== operation) return;
     render(request);
     const url = new URL(location.href); url.searchParams.set('fusion', request.id); url.hash = 'fusion'; history.replaceState(null, '', url);
-    status(optionalPartner(request) ? 'Ready to create. Share the link for optional partner approval.' : 'Review your approval, then share the link with your partner.');
+    status(optionalPartner(request) ? 'Parents checked. Click “Create the child” below.' : 'Review your approval, then share this creation with the other holder.');
     await listMine();
   });
+});
+$('start-new-family').addEventListener('click', () => {
+  if (busy || !getWalletAddress()) return;
+  choosingNew = true; operation++; current = null; resetMessage(); comicError(''); clearTimeout(poll);
+  $('invitation-card').hidden = true;
+  $('fusion-parent-b').value = ''; previewParent('b', true);
+  const url = new URL(location.href); url.searchParams.delete('fusion'); url.hash = 'fusion'; history.replaceState(null, '', url);
+  controls(); status('Choose a second parent to start a new family. Your previous creations are still saved.');
+  $('fusion').scrollIntoView({ behavior: 'smooth' });
 });
 $('review-approval').addEventListener('click', () => void perform(async () => {
   const id = current?.id, attempt = operation; if (!id) return;
@@ -240,10 +297,10 @@ $('recheck-invitation').addEventListener('click', () => void perform(async () =>
 $('refresh-invitation').addEventListener('click', () => { if (!busy && current) void load(current.id); });
 $('generate-artwork').addEventListener('click', () => void perform(async () => {
   const id = current?.id, attempt = operation; if (!id) return;
-  status('Checking consent and both owners before preparing the artwork…');
+  status('Checking both Chog owners before drawing the child…');
   const request = await api(`/api/fusions/${id}/generate`, {});
   if (attempt !== operation || current?.id !== id) return;
-  render(request); status('Your fusion is underway. This page will update as it progresses.');
+  render(request); status('Your child is being drawn. This page updates automatically.');
 }));
 async function gallery() {
   try {
@@ -255,7 +312,7 @@ async function gallery() {
       const label = document.createElement('p'); label.textContent = `${request.artwork.mode === 'fixture' ? 'TEST · ' : ''}#${request.parents[0].tokenId} + #${request.parents[1].tokenId}`;
       const approval = document.createElement('p'); approval.textContent = approvalSummary(request);
       card.append(image, label, approval);
-      if (request.comic?.artwork) { const badge = document.createElement('span'); badge.className = 'comic-gallery-badge'; badge.textContent = 'Family comic inside ↗'; card.append(badge); }
+      const badge = document.createElement('span'); badge.className = 'comic-gallery-badge'; badge.textContent = request.comic?.artwork ? 'Comic saved ↗' : 'Child artwork · No comic yet'; card.append(badge);
       $('live-gallery').append(card);
     }
     if (!data.artworks.length) $('live-gallery').textContent = 'The first Chog characters will appear here.';
@@ -285,7 +342,9 @@ $('change-chog').addEventListener('click', () => window.dispatchEvent(new Custom
 for (const side of ['a', 'b']) for (const event of ['input', 'change']) $(`fusion-parent-${side}`).addEventListener(event, () => previewParent(side));
 window.addEventListener('chogchemy:token', event => selectParentA(event.detail.tokenId));
 window.addEventListener('chogchemy:wallet', () => {
+  drawingUsage = null; usagePending = null;
   operation++; resetMessage(); controls();
+  void refreshUsage();
   previewParent('a', true); previewParent('b', true);
   if (current) void load(current.id);
   void listMine();

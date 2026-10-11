@@ -31,7 +31,8 @@ function clearWallet() {
   $('manual-chog').open = false;
   window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: '' } }));
   $('connect-wallet').textContent = 'Connect wallet'; $('connect-wallet').disabled = false;
-  status('Connect your wallet to get started. The demo needs no wallet.');
+  $('connect-wallet-main').hidden = false;
+  status('Connect to start creating or reopen your saved work.');
   window.dispatchEvent(new CustomEvent('chogchemy:wallet', { detail: { address: null } }));
 }
 async function disconnect() {
@@ -57,7 +58,7 @@ async function contextMatches(expectedAddress) {
 async function connect() {
   if (busy) return;
   if (address) { document.getElementById('holder').scrollIntoView({ behavior: 'smooth' }); return; }
-  busy = true; $('connect-wallet').disabled = true;
+  busy = true; $('connect-wallet').disabled = true; $('connect-wallet-main').disabled = true;
   let authenticated = false;
   try {
     if (!window.ethereum?.request) throw new Error('Open this page in a browser with an Ethereum-compatible wallet extension, such as MetaMask or Rabby.');
@@ -89,6 +90,7 @@ async function connect() {
     const session = await api('/api/auth/verify', { id: challenge.id, signature }); authenticated = true;
     if (attempt !== revision || !await contextMatches(expectedAddress)) throw new Error('Wallet changed while signing. Connect again.');
     address = session.address; $('holder-tools').hidden = false;
+    $('connect-wallet-main').hidden = true;
     $('connect-wallet').textContent = `${address.slice(0, 6)}…${address.slice(-4)}`;
     window.dispatchEvent(new CustomEvent('chogchemy:wallet', { detail: { address } }));
     status('Wallet verified on Monad. Checking your Chog collection…');
@@ -99,7 +101,7 @@ async function connect() {
       if (authenticated) try { await api('/api/logout', {}); } catch { /* Server session will expire. */ }
     }
     status(error.code === 4001 ? 'You cancelled the wallet request. Connect again when ready.' : error.message);
-  } finally { busy = false; $('connect-wallet').disabled = false; }
+  } finally { busy = false; $('connect-wallet').disabled = false; $('connect-wallet-main').disabled = false; }
 }
 async function refreshChogs() {
   if (!address) return;
@@ -118,7 +120,7 @@ async function refreshChogs() {
       button.addEventListener('click', () => { $('token-id').value = tokenId; void lookup(); }); $('owned-chogs').append(button);
     }
     if (result.tokenIds?.length === result.limit && BigInt(result.balance) > BigInt(result.limit)) $('balance-status').textContent += ` Showing the first ${result.limit}; look up others by ID.`;
-    status('Wallet verified. Select a Chog to use it as Parent A.');
+    status('Wallet connected. Choose your Chog as the first parent.');
     if (result.balance === '1' && result.tokenIds?.length === 1) { $('token-id').value = result.tokenIds[0]; await lookup(); }
   } catch (error) { if (attempt === revision) { $('balance-status').textContent = ''; status(error.message); } }
   finally { $('refresh-chogs').disabled = false; }
@@ -161,6 +163,7 @@ window.addEventListener('chogchemy:choose-token', () => {
   else { $('manual-chog').open = true; $('token-id').focus({ preventScroll: true }); $('token-id').select(); status('Look up another Chog you own, or keep the selected Chog.'); }
 });
 $('connect-wallet').addEventListener('click', connect);
+$('connect-wallet-main').addEventListener('click', connect);
 $('disconnect-wallet').addEventListener('click', disconnect);
 $('refresh-chogs').addEventListener('click', refreshChogs);
 $('lookup-chog').addEventListener('submit', event => { event.preventDefault(); void lookup(); });
