@@ -38,6 +38,7 @@ function resetMessage() { message = null; $('approval-review').hidden = true; $(
 function controls() {
   const address = getWalletAddress(), role = current?.parents.findIndex(p => p.owner === address) ?? -1;
   $('create-fusion').disabled = busy || !address;
+  $('change-chog').disabled = busy;
   $('refresh-invitation').disabled = busy;
   $('review-approval').hidden = !current || !active(current) || role < 0 || !!current.parents[role].approvedAt || (optionalPartner(current) && address === current.createdBy);
   $('review-approval').textContent = current && optionalPartner(current) ? 'Add my optional approval' : 'Review my approval';
@@ -57,14 +58,14 @@ function render(request) {
   current = request; resetMessage(); $('invitation-card').hidden = false;
   $('invitation-link').value = request.invitationUrl;
   $('invitation-state').textContent = ({ awaiting_approvals: 'Waiting for both holders', approved: optionalPartner(request) ? 'Ready to create' : 'Both holders approved', preparing: 'Preparing parent artwork', generating: 'Creating your new character…', generated: 'Meet your new character.', generation_failed: 'Artwork could not be saved', cancelled: 'Cancelled', invalidated: 'Ownership changed', expired: 'Expired' })[request.state] || request.state;
-  $('invitation-approval-policy').textContent = `${approvalSummary(request)}. ${optionalPartner(request) ? 'Partner approval is optional. Only the creator can start this fusion.' : 'This invitation requires both signatures.'}`;
+  $('invitation-approval-policy').textContent = `${approvalSummary(request)}.${optionalPartner(request) ? ' Only the creator can start this fusion.' : ''}`;
   $('invitation-parents').replaceChildren();
   for (const [index, parent] of request.parents.entries()) {
     const card = document.createElement('article');
     const label = document.createElement('span'); label.className = 'eyebrow'; label.textContent = `PARENT ${index === 0 ? 'A' : 'B'}`;
     const title = document.createElement('h3'); title.textContent = `Token #${parent.tokenId}`;
     const holder = document.createElement('p'); holder.textContent = `Holder ${short(parent.owner)}`; holder.title = parent.owner;
-    const approval = document.createElement('p'); approval.className = 'approval-state'; approval.textContent = parent.approvedAt ? `Signed ${new Date(parent.approvedAt).toLocaleString()}` : optionalPartner(request) ? (parent.owner === request.createdBy ? 'Creator wallet and ownership verified' : 'Partner has not signed · Approval optional') : 'Awaiting signed approval';
+    const approval = document.createElement('p'); approval.className = 'approval-state'; approval.textContent = parent.approvedAt ? 'Signed approval' : optionalPartner(request) ? (parent.owner === request.createdBy ? 'Creator wallet and ownership verified' : 'Partner has not signed · Approval optional') : 'Awaiting signed approval';
     const link = document.createElement('a'); link.textContent = 'View Chog ↗'; link.href = `https://opensea.io/item/monad/${request.collection.address}/${parent.tokenId}`; link.target = '_blank'; link.rel = 'noopener noreferrer';
     card.append(label, title, holder, approval, link); $('invitation-parents').append(card);
     if (getWalletAddress()) void getChogPreview(parent.tokenId).then(preview => {
@@ -74,9 +75,11 @@ function render(request) {
     }).catch(() => {});
   }
   $('invitation-expiry').textContent = `Expires ${new Date(request.expires).toLocaleString()} · Art direction ${request.artDirection}`;
+  $('invitation-approval-times').textContent = request.parents.filter(p => p.approvedAt).map(p => `Token #${p.tokenId} signed ${new Date(p.approvedAt).toLocaleString()}`).join(' · ');
+  $('invitation-style-hash').textContent = request.artDirectionHash ? `Art direction hash ${request.artDirectionHash}` : '';
   $('ownership-check').textContent = `Ownership last checked ${new Date(request.checkedAt).toLocaleString()} at Monad block ${request.checkedBlock}.`;
   $('ready-note').hidden = request.state !== 'approved';
-  $('ready-note').textContent = request.generation?.error || (request.generationAvailable ? `${optionalPartner(request) ? 'No additional signature is needed from you or the partner.' : 'Both holders approved.'} Ownership is checked again before the studio begins.` : 'Your fusion is saved. The artwork studio is not available for this invitation yet.');
+  $('ready-note').textContent = request.generation?.error || (request.generationAvailable ? 'Ready to create. Ownership is checked again before drawing.' : 'Your fusion is saved. The artwork studio is not available for this invitation yet.');
   $('generation-note').hidden = !['preparing', 'generating', 'generation_failed'].includes(request.state);
   $('generation-note').textContent = request.generation?.error || (request.state === 'preparing' ? 'Loading the two parent images. Either holder can still cancel during preparation.' : 'The studio is drawing. This can take a few minutes; you can leave and return to this link.');
   $('generated-result').hidden = !request.artwork;
@@ -84,7 +87,7 @@ function render(request) {
     $('generated-image').src = request.artwork.url;
     $('download-artwork').href = request.artwork.url;
     $('view-character').href = request.characterUrl;
-    $('artwork-caption').textContent = `${request.artwork.mode === 'fixture' ? 'TEST ARTWORK · Synthetic output' : 'AI character artwork'} · Parents #${request.parents.map(p => p.tokenId).join(' + #')} · ${approvalSummary(request)} · ${request.artDirection}. An artwork record; no NFT has been minted.`;
+    $('artwork-caption').textContent = `${request.artwork.mode === 'fixture' ? 'TEST ARTWORK · Synthetic output' : 'AI character artwork'} · Parents #${request.parents.map(p => p.tokenId).join(' + #')} · ${approvalSummary(request)}. An artwork record; no NFT has been minted.`;
     void gallery();
   }
   clearTimeout(poll);
@@ -144,7 +147,7 @@ $('new-fusion').addEventListener('submit', event => {
     if (attempt !== operation) return;
     render(request);
     const url = new URL(location.href); url.searchParams.set('fusion', request.id); url.hash = 'fusion'; history.replaceState(null, '', url);
-    status(optionalPartner(request) ? 'Your Chog is verified. Create your character now, or share the link for optional partner approval.' : 'Invitation created. Review and sign your approval, then share the link with your partner.');
+    status(optionalPartner(request) ? 'Ready to create. Share the link for optional partner approval.' : 'Review your approval, then share the link with your partner.');
     await listMine();
   });
 });
@@ -218,8 +221,16 @@ $('copy-invitation').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(current.invitationUrl); status('Invitation link copied.'); }
   catch { $('invitation-link').select(); status('Select and copy the invitation link above.'); }
 });
+function selectParentA(tokenId) {
+  $('fusion-parent-a').value = tokenId;
+  const selected = !!tokenId && !!getWalletAddress();
+  $('parent-a-field').hidden = selected;
+  $('change-chog').hidden = !selected;
+  previewParent('a', true);
+}
+$('change-chog').addEventListener('click', () => window.dispatchEvent(new CustomEvent('chogchemy:choose-token')));
 for (const side of ['a', 'b']) for (const event of ['input', 'change']) $(`fusion-parent-${side}`).addEventListener(event, () => previewParent(side));
-window.addEventListener('chogchemy:token', event => { $('fusion-parent-a').value = event.detail.tokenId; previewParent('a', true); });
+window.addEventListener('chogchemy:token', event => selectParentA(event.detail.tokenId));
 window.addEventListener('chogchemy:wallet', () => {
   operation++; resetMessage(); controls();
   previewParent('a', true); previewParent('b', true);

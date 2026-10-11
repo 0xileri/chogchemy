@@ -8,6 +8,7 @@ import { createChogPreviews } from './chog-previews.mjs';
 import { renderCharacterPage, renderCharacterNotFound } from './character-page.mjs';
 
 const staticFiles = {
+  '/demo': ['demo.html', 'text/html'], '/demo/': ['demo.html', 'text/html'],
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
   '/character.js': ['character.js', 'text/javascript'], '/share.js': ['share.js', 'text/javascript'],
@@ -69,7 +70,7 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         const file = Object.hasOwn(staticFiles, url.pathname) ? staticFiles[url.pathname] : null;
         if (!file || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(404); res.end('Not found'); return; }
         let data = await readFile(new URL(`../public/${file[0]}`, import.meta.url));
-        if (url.pathname === '/') data = Buffer.from(data.toString('utf8').replaceAll('__APP_ORIGIN__', appOrigin.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')));
+        if (file[1] === 'text/html') data = Buffer.from(data.toString('utf8').replaceAll('__APP_ORIGIN__', appOrigin.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')));
         res.writeHead(200, { 'Content-Type': file[1].startsWith('text/') ? `${file[1]}; charset=utf-8` : file[1], 'Content-Length': data.length, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         res.end(req.method === 'HEAD' ? undefined : data); return;
       }

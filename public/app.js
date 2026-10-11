@@ -11,7 +11,7 @@ function portrait(color, accent = color) {
 for (const key of ['a', 'b']) {
   for (const parent of parents) { const option = document.createElement('option'); option.value = parent.id; option.textContent = parent.name; $(`parent-${key}`).append(option); }
   $(`parent-${key}`).selectedIndex = key === 'a' ? 0 : 1;
-  $(`parent-${key}`).addEventListener('change', () => { $(`approve-${key}`).checked = false; renderParents(); });
+  $(`parent-${key}`).addEventListener('change', renderParents);
 }
 function getParent(key) { return parents.find(p => p.id === $(`parent-${key}`).value); }
 function renderParents() { for (const key of ['a', 'b']) { const p = getParent(key); $(`preview-${key}`).innerHTML = portrait(p.color); $(`traits-${key}`).textContent = p.trait; } }
@@ -31,7 +31,6 @@ function renderFamily() {
 $('fuse').addEventListener('click', () => {
   const a = getParent('a'), b = getParent('b');
   if (a.id === b.id) { $('status').textContent = 'Choose two different parents to create a fusion.'; return; }
-  if (!$('approve-a').checked || !$('approve-b').checked) { $('status').textContent = 'Simulate approval from both parents to continue.'; return; }
   const child = { a: a.id, b: b.id, name: `${a.name}${b.name.toLowerCase()}`, id: crypto.randomUUID() };
   $('result-art').innerHTML = portrait(a.color, b.color); $('result-art').classList.remove('empty');
   $('result-name').textContent = child.name; $('result-description').textContent = `A little ${a.name}. A little ${b.name}. Entirely its own thing.`;

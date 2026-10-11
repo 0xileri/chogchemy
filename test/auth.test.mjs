@@ -116,8 +116,21 @@ test('RPC failures return an actionable error without exposing provider secrets'
 });
 test('static routes serve the app and reject unexpected paths', async () => {
   const f = fixture();
-  for (const path of ['/', '/app.js', '/wallet.js', '/style.css']) assert.equal((await f.request(path)).status, 200);
+  for (const path of ['/', '/demo', '/demo/', '/app.js', '/wallet.js', '/style.css']) assert.equal((await f.request(path)).status, 200);
   for (const path of ['/toString', '/missing', '/.env', '/package.json']) assert.equal((await f.request(path)).status, 404);
+});
+
+test('the public demo has its own canonical page and needs no holder session or chain lookup', async () => {
+  const f = fixture();
+  const demo = await f.request('/demo');
+  assert.equal(demo.headers['content-type'], 'text/html; charset=utf-8');
+  assert.match(demo.body, /href="http:\/\/localhost:3000\/demo"/);
+  assert.doesNotMatch(demo.body, /__APP_ORIGIN__/);
+  const head = await f.request('/demo', { method: 'HEAD' });
+  assert.equal(head.status, 200);
+  assert.equal(head.bytes, undefined);
+  assert.equal(head.headers['content-length'], demo.bytes.length);
+  assert.equal(f.calls(), 0);
 });
 
 test('branding images use binary MIME types and HEAD metadata while source files stay private', async () => {

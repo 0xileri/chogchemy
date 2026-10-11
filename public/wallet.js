@@ -28,7 +28,7 @@ function clearWallet() {
   $('manual-chog').open = false;
   window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: '' } }));
   $('connect-wallet').textContent = 'Connect wallet'; $('connect-wallet').disabled = false;
-  status('Wallet disconnected. The sample lab below is open to everyone.');
+  status('Connect your wallet to get started. The demo needs no wallet.');
   window.dispatchEvent(new CustomEvent('chogchemy:wallet', { detail: { address: null } }));
 }
 async function disconnect() {
@@ -101,6 +101,7 @@ async function connect() {
 async function refreshChogs() {
   if (!address) return;
   const attempt = ++revision;
+  window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: '' } }));
   $('refresh-chogs').disabled = true; $('verified-chog').hidden = true;
   $('owned-chogs').replaceChildren(); $('balance-status').textContent = 'Finding your Chogs on Monad… This can take a few seconds.';
   try {
@@ -108,7 +109,7 @@ async function refreshChogs() {
     const result = await api('/api/chogs');
     if (attempt !== revision) return;
     $('manual-chog').open = result.tokenIds === null;
-    $('balance-status').textContent = result.balance === '0' ? 'No Chog Genesis NFTs found in this wallet. You can still try the sample lab.' : `You own ${result.balance} Chog Genesis NFT${result.balance === '1' ? '' : 's'}. ${result.tokenIds === null ? 'Automatic discovery is temporarily unavailable. You can enter a token ID below.' : !result.tokenIds.length ? 'Your holdings may have just changed. Refresh in a moment or use manual lookup.' : result.tokenIds.length === 1 && result.balance === '1' ? 'Found your Chog automatically.' : 'Choose your Chog below.'}`;
+    $('balance-status').textContent = result.balance === '0' ? 'No Chog Genesis NFTs found in this wallet. You can still try the demo.' : `You own ${result.balance} Chog Genesis NFT${result.balance === '1' ? '' : 's'}. ${result.tokenIds === null ? 'Automatic discovery is temporarily unavailable. You can enter a token ID below.' : !result.tokenIds.length ? 'Your holdings may have just changed. Refresh in a moment or use manual lookup.' : result.tokenIds.length === 1 && result.balance === '1' ? 'Found your Chog automatically.' : 'Choose your Chog below.'}`;
     for (const tokenId of result.tokenIds || []) {
       const button = document.createElement('button'); button.type = 'button'; button.textContent = `Chog #${tokenId}`;
       button.addEventListener('click', () => { $('token-id').value = tokenId; void lookup(); }); $('owned-chogs').append(button);
@@ -124,16 +125,18 @@ async function lookup() {
   const tokenId = $('token-id').value.trim();
   if (!/^(0|[1-9][0-9]{0,77})$/.test(tokenId)) { status('Enter a numeric token ID from your NFT’s OpenSea URL.'); return; }
   const attempt = ++revision;
+  window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: '' } }));
   $('verified-chog').hidden = true; status(`Checking ownership of token #${tokenId}…`);
   try {
     if (!await contextMatches(address)) { await disconnect(); return; }
     const token = await api(`/api/chog?id=${encodeURIComponent(tokenId)}`);
     if (attempt !== revision) return;
     $('chog-name').textContent = `Chog Genesis · Token #${token.tokenId}`;
-    $('chog-proof').textContent = `Owned by ${token.owner.slice(0, 6)}…${token.owner.slice(-4)} · Checked ${new Date(token.checkedAt).toLocaleTimeString()}`;
+    $('chog-proof').textContent = `Ownership verified · ${token.owner.slice(0, 6)}…${token.owner.slice(-4)}`;
+    $('chog-record').textContent = `Checked ${new Date(token.checkedAt).toLocaleString()} · Holder ${token.owner}`;
     $('chog-link').href = `https://opensea.io/item/monad/${token.collection.address}/${token.tokenId}`;
     $('chog-traits').textContent = 'Loading artwork and traits…'; $('chog-art').textContent = '✳'; $('verified-chog').hidden = false;
-    status('Ownership confirmed. You can use this token as Parent A in an invitation.');
+    status('Your Chog is selected. Add the other Chog below.');
     window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: token.tokenId } }));
     try {
       const metadata = await getChogPreview(token.tokenId);
@@ -147,6 +150,13 @@ async function lookup() {
     } catch { if (attempt === revision) { $('chog-traits').textContent = 'Ownership confirmed. Artwork is temporarily unavailable; refresh or view it on OpenSea.'; $('chog-art').textContent = 'Artwork unavailable'; } }
   } catch (error) { if (attempt === revision) status(error.message); }
 }
+window.addEventListener('chogchemy:choose-token', () => {
+  if (!address) return;
+  $('holder').scrollIntoView({ behavior: 'smooth' });
+  const choices = $('owned-chogs').querySelectorAll('button');
+  if (choices.length > 1) { choices[0].focus({ preventScroll: true }); status('Choose another Chog from your collection.'); }
+  else { $('manual-chog').open = true; $('token-id').focus({ preventScroll: true }); $('token-id').select(); status('Look up another Chog you own, or keep the selected Chog.'); }
+});
 $('connect-wallet').addEventListener('click', connect);
 $('disconnect-wallet').addEventListener('click', disconnect);
 $('refresh-chogs').addEventListener('click', refreshChogs);
