@@ -5,7 +5,7 @@ The app supports one Docker web service on Railway or Render with persistent sto
 ## Railway
 
 1. Sign in at https://railway.com and create a project from the private GitHub repository `0xileri/chogchemy`. Configure the service before its first successful deployment; a missing public origin intentionally prevents production startup.
-2. Railway uses `Dockerfile` and the checked-in `railway.json` for the build, `/healthz` health check, and bounded process restarts.
+2. Railway uses the existing `Dockerfile`. In service Settings, configure the health check path as `/healthz`, its timeout as 300 seconds, and the On Failure restart policy with 3 retries. New services cannot opt into the deprecated `railway.json` configuration, according to the current dashboard; configure these settings directly.
 3. Attach a volume mounted at `/var/data`. Keep one service replica and disable serverless/app sleeping because image-generation jobs run in the background.
 4. Generate a public domain in the service's Networking settings, targeting port `10000`. Set the following service variables before deploying:
 
