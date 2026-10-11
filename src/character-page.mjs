@@ -21,7 +21,7 @@ ${missing ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 <a class="skip-link" href="#main-content">Skip to content</a>
 <header><a class="brand" href="/" aria-label="Chogchemy home"><img src="/brand/chogchemy-logo-v1.png" alt="Chogchemy" width="2172" height="724"></a><a class="family-nav" href="/#descendants">Explore the family ↗</a><a class="button" href="/#holder">Create a character ↗</a></header>
 <main id="main-content">${content}</main>
-<footer><a class="brand footer-brand" href="/" aria-label="Chogchemy home"><img src="/brand/chogchemy-logo-v1.png" alt="Chogchemy" width="2172" height="724"></a><p>Two Chogs. One new character.<br><span>Built for Chogathon · Early prototype</span></p></footer>
+<footer><a class="brand footer-brand" href="/" aria-label="Chogchemy home"><img src="/brand/chogchemy-logo-v1.png" alt="Chogchemy" width="2172" height="724"></a><p>Team Chogchemy<br><span>Built by <a href="https://x.com/0xileri" target="_blank" rel="noopener noreferrer">@0xileri</a> · Artist reference and art direction by <a href="https://x.com/theejhay01" target="_blank" rel="noopener noreferrer">@theejhay01</a><br>AI-generated child artwork and comics · Built for Chogathon</span></p></footer>
 ${script ? '<script type="module" src="/character.js"></script>' : ''}</body></html>`;
 }
 

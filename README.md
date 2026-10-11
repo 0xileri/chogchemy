@@ -53,7 +53,7 @@ Without real holders, run `node scripts/preview-test.mjs`, then open http://loca
 
 The Chogchemy identity kit is in [assets/brand/BRAND-GUIDE.md](assets/brand/BRAND-GUIDE.md): transparent logo and icon, social banner, palette, typography, and copy. Open `assets/brand/brand-preview.html` for the visual overview. The site uses this identity in its header, hero, parent preview accents, studio banner, footer, favicon, and social metadata. Social image/canonical URLs use the configured app origin. Only the three named PNGs are publicly served at `/brand/`; brand source documents remain private. These branding assets are separate from the artist reference drawings used for character generation.
 
-Art direction version 2 uses the comic artist's supplied finished fusion drawing, `assets/artist/comic-fusion-reference-v1.jpg`, as a style reference. Bold black outlines, saturated colors, grainy texture and simple shading guide the output; the selected parent NFTs supply its features. This hand-drawn reference is separate from the generated gallery. The artist's display name and credit handle are still to be supplied.
+Art direction version 2 uses the comic artist's supplied finished fusion drawing, `assets/artist/comic-fusion-reference-v1.jpg`, as a style reference. Bold black outlines, saturated colors, grainy texture and simple shading guide the output; the selected parent NFTs supply its features. This hand-drawn reference is separate from the generated gallery. Artist reference and art direction: [@theejhay01](https://x.com/theejhay01). Builder: [@0xileri](https://x.com/0xileri). Team: Chogchemy. Site credits distinguish the original artist contribution from AI-generated results.
 
 Edit `art-direction.json` to refine the rules or add up to four approved PNG/JPEG/WebP drawings in `assets/artist/`, then list their filenames in `references`. Restart after changing it and prepare a new fusion to use the new style.
 
@@ -89,6 +89,8 @@ See [DEPLOY.md](DEPLOY.md) for the live Railway deployment, verification and bud
 - Comic artist: original style guide, approved reference drawings, sample fusions and output review.
 
 For submission, gather real holder feedback, record a demo under three minutes, and disclose sample/test fixtures and any pre-existing work.
+
+Submission text, judge instructions, and the demo recording script are in [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/JUDGE-GUIDE.md](docs/JUDGE-GUIDE.md), and [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md).
 
 ## Clear creation flow
 
