@@ -1,6 +1,35 @@
 # Deploy Chogchemy
 
-The app is prepared for one Render Docker web service with a persistent disk. This is a paid hosting configuration; review Render's current quote before approving creation. No hosting resources have been purchased or deployed by this repository.
+The app supports one Docker web service on Railway or Render with persistent storage. No deployment has been completed yet. Review the account's plan and usage charges before creating paid resources.
+
+## Railway
+
+1. Sign in at https://railway.com and create a project from the private GitHub repository `0xileri/chogchemy`. Configure the service before its first successful deployment; a missing public origin intentionally prevents production startup.
+2. Railway uses `Dockerfile` and the checked-in `railway.json` for the build, `/healthz` health check, and bounded process restarts.
+3. Attach a volume mounted at `/var/data`. Keep one service replica and disable serverless/app sleeping because image-generation jobs run in the background.
+4. Generate a public domain in the service's Networking settings, targeting port `10000`. Set the following service variables before deploying:
+
+   | Variable | Value |
+   | --- | --- |
+   | `APP_ORIGIN` | The exact generated HTTPS URL, with no trailing slash |
+   | `DATABASE_PATH` | `/var/data/chogchemy.sqlite` |
+   | `IMAGE_PROVIDER` | `orbio` |
+   | `ORBIO_API_KEY` | A fresh key entered privately in Railway's Variables UI |
+   | `ORBIO_IMAGE_MODEL` | `openai/gpt-image-2` |
+   | `ORBIO_IMAGE_QUALITY` | `medium` |
+   | `GENERATION_DAILY_LIMIT` | `10` |
+   | `GENERATION_HOLDER_DAILY_LIMIT` | `2` |
+   | `PORT` | `10000` |
+
+   The Dockerfile already sets `NODE_ENV=production` and `HOST=0.0.0.0`. Do not copy the local `.env` wholesale or use a localhost origin in production.
+5. Review billing and set a hosting usage limit, then deploy. Hobby includes $5 of monthly resource usage in its $5 subscription; usage above that is additional. Full trials have outbound access; limited trials may block the Monad RPC and image provider. Confirm your account's current terms and limits in the dashboard.
+6. Verify `/healthz`, `/api/config` (the returned origin must match the public URL), branding assets, then wallet sign-in and the real-holder testing steps in README.md. Image generation is billed separately by Orbio.
+
+The volume starts empty. Local invitations and artwork are not included in the Docker image or copied automatically. Preserve a database backup if migrating existing records.
+
+Documentation: [Railway Dockerfiles](https://docs.railway.com/builds/dockerfiles), [volumes](https://docs.railway.com/volumes), [pricing](https://docs.railway.com/pricing/plans), [configuration](https://docs.railway.com/config-as-code/reference).
+
+## Render
 
 1. Sign in at https://dashboard.render.com and connect the private GitHub repository `0xileri/chogchemy`.
 2. Choose **New → Blueprint**, select the repository, and use `render.yaml`.

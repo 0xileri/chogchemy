@@ -70,7 +70,7 @@ Image bytes can be checked against their SHA-256 digest, but the server/database
 
 ## Hosting and team
 
-See [DEPLOY.md](DEPLOY.md). `Dockerfile` and `render.yaml` prepare one Render web service with a persistent disk and `/healthz`. This uses paid hosting: review the quote before creating it. No deployment has been completed yet.
+See [DEPLOY.md](DEPLOY.md). `Dockerfile` plus `railway.json` or `render.yaml` prepare one Railway or Render web service with persistent storage and `/healthz`. Review hosting charges before creating paid resources. No deployment has been completed yet.
 
 - Developer: wallet and ownership checks, consent, image integration, persistence and hosting.
 - Comic artist: original style guide, approved reference drawings, sample fusions and output review.
