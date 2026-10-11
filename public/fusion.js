@@ -2,7 +2,7 @@ import { api, getWalletAddress, signWalletMessage, getChogPreview } from './wall
 import { shareOrCopy } from './share.js';
 
 const $ = id => document.getElementById(id);
-let current = null, message = null, operation = 0, busy = false, poll = null;
+let current = null, message = null, operation = 0, busy = false, poll = null, comicAction = null;
 const status = text => { $('fusion-status').textContent = text; };
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const active = request => ['awaiting_approvals', 'approved'].includes(request.state) && request.expires > Date.now();
@@ -54,11 +54,13 @@ function controls() {
   $('generate-artwork').disabled = busy;
   $('generate-comic').hidden = !current?.canGenerateComic;
   $('generate-comic').disabled = busy;
+  $('generate-comic').textContent = comicAction === 'generate' ? 'Checking your family…' : 'Create our family comic ✳';
   $('cancel-comic').hidden = current?.comic?.state !== 'preparing' || address !== current?.createdBy;
   $('cancel-comic').disabled = busy;
   if (current?.state === 'preparing' && role >= 0) $('cancel-invitation').hidden = false;
 }
 function render(request) {
+  if (current?.id !== request.id) comicError('');
   current = request; resetMessage(); $('invitation-card').hidden = false;
   $('invitation-link').value = request.invitationUrl;
   $('invitation-state').textContent = ({ awaiting_approvals: 'Waiting for both holders', approved: optionalPartner(request) ? 'Ready to create' : 'Both holders approved', preparing: 'Preparing parent artwork', generating: 'Creating your new character…', generated: 'Meet your new character.', generation_failed: 'Artwork could not be saved', cancelled: 'Cancelled', invalidated: 'Ownership changed', expired: 'Expired' })[request.state] || request.state;
@@ -101,6 +103,10 @@ function render(request) {
   $('invitation-role').textContent = !address ? 'Connect the wallet holding either parent to review and sign.' : request.parents.some(p => p.owner === address) ? 'This wallet is one of the two invited holders.' : 'This wallet is not one of the invited holders. Switch to the wallet holding a listed parent.';
   controls();
 }
+function comicError(text) {
+  $('comic-error').textContent = text;
+  $('comic-error').hidden = !text;
+}
 function renderComic(request) {
   $('family-comic-studio').hidden = !request.artwork;
   const comic = request.comic;
@@ -122,13 +128,13 @@ $('generate-comic').addEventListener('click', () => void perform(async () => {
   const request = await api(`/api/fusions/${id}/comic`, {});
   if (attempt !== operation || current?.id !== id) return;
   render(request); status('Your family comic is underway.');
-}));
+}, 'generate'));
 $('cancel-comic').addEventListener('click', () => void perform(async () => {
   const id = current?.id, attempt = operation; if (!id) return;
   const request = await api(`/api/fusions/${id}/cancel-comic`, {});
   if (attempt !== operation || current?.id !== id) return;
   render(request); status('Comic preparation cancelled. Your child artwork is saved.');
-}));
+}, 'cancel'));
 $('share-family').addEventListener('click', async () => {
   const url = current?.characterUrl; if (!url) return;
   const result = await shareOrCopy(url + '#family-comic', 'Our Chog Family — Chogchemy');
@@ -163,18 +169,24 @@ async function listMine() {
     if (!data.requests.length) $('invitation-list').textContent = 'No invitations for this wallet yet.';
   } catch (error) { if (getWalletAddress() === address) $('invitation-list').textContent = error.message; }
 }
-async function perform(work) {
+async function perform(work, familyAction = null) {
   if (busy) return;
+  const comicId = familyAction ? current?.id : null;
+  comicAction = familyAction;
+  if (familyAction) comicError('');
   busy = true; controls();
   const attempt = operation;
   try { await work(); }
   catch (error) {
+    const errorText = error.status === 401 ? 'Your wallet session expired. Connect and sign in again, then create your family comic.' : error.message;
+    // A 401 clears the wallet and advances operation; still explain it beside this comic.
+    if (familyAction && current?.id === comicId && (attempt === operation || (error.status === 401 && !getWalletAddress()))) comicError(errorText);
     if (attempt === operation) {
       if (error.status === 409 && current) await load(current.id);
       status(error.code === 4001 ? 'Approval cancelled in your wallet. Nothing was signed or saved.' : error.message);
     }
   }
-  finally { busy = false; controls(); }
+  finally { busy = false; comicAction = null; controls(); }
 }
 $('new-fusion').addEventListener('submit', event => {
   event.preventDefault();

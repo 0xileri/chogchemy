@@ -20,7 +20,8 @@ export function createFamilyComicService({ store, chain, getRecord, serial, view
       const parents = await Promise.all(initial.parents.map(p => loadReference(chain, p.tokenId)));
       const child = store.artwork(id);
       if (!child?.length || digest(child) !== initial.artwork.digest || imageMime(child) !== 'image/png') fail(409, 'The saved child artwork could not be verified.');
-      const input = { kind: 'comic', parents: [...parents, { bytes: child, mime: 'image/png', name: 'Saved fusion child', tokenId: 'child', traits: [] }], artDirection };
+      let input = { kind: 'comic', parents: [...parents, { bytes: child, mime: 'image/png', name: 'Saved fusion child', tokenId: 'child', traits: [] }], artDirection };
+      if (imageGenerator.prepareInput) input = await imageGenerator.prepareInput(input);
       imageGenerator.validateInput?.(input);
       const dispatch = await serial(async () => {
         const record = getRecord(id);

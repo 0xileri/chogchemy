@@ -13,7 +13,10 @@ async function api(path, body) {
   const response = await fetch(path, { credentials: 'same-origin', ...(body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) });
   const data = await response.json();
   if (!response.ok) {
-    if (response.status === 401) clearWallet();
+    if (response.status === 401) {
+      clearWallet();
+      status('Your wallet session expired. Connect and sign in again to continue.');
+    }
     const error = new Error(data.error || 'Request failed. Please retry.');
     error.status = response.status;
     throw error;

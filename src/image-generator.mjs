@@ -1,5 +1,6 @@
 import { limitedBytes } from './reference-assets.mjs';
 import { imageMime } from './art-direction.mjs';
+import sharp from 'sharp';
 
 export function fusionPrompt(parents, direction) {
   return [
@@ -72,6 +73,32 @@ function createOrbioImageGenerator({ apiKey = process.env.ORBIO_API_KEY, model =
   return {
     configured: Boolean(apiKey), mode: 'ai', model, provider: 'orbio',
     validateInput(input) { body(input); },
+    async prepareInput(input) {
+      try { body(input); return input; }
+      catch (error) { if (!error.publicMessage) throw error; }
+      // Resize copies only. The original saved child and its ancestry digest stay intact.
+      // Process sequentially to keep decoded image memory bounded on the hosting instance.
+      for (const [size, quality] of [[1024, 85], [768, 75]]) {
+        const compact = [];
+        for (const image of [...input.parents, ...input.artDirection.images]) {
+          let bytes;
+          try {
+            bytes = await sharp(image.bytes, { limitInputPixels: 16777216 })
+              .rotate().resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
+              .flatten({ background: '#ffffff' }).jpeg({ quality }).toBuffer();
+          } catch {
+            const error = new Error('Could not resize a family reference image. Your child artwork is saved.');
+            error.publicMessage = error.message; throw error;
+          }
+          compact.push({ ...image, bytes, mime: 'image/jpeg' });
+        }
+        const prepared = { ...input, parents: compact.slice(0, input.parents.length), artDirection: { ...input.artDirection, images: compact.slice(input.parents.length) } };
+        try { body(prepared); return prepared; }
+        catch (error) { if (!error.publicMessage) throw error; }
+      }
+      const error = new Error('The family references are still too large after compression. Your child artwork is saved.');
+      error.publicMessage = error.message; throw error;
+    },
     async generate(input) {
       if (!apiKey) throw new Error('Orbio image API key is not configured.');
       // Send this credential only to Orbio. Never retry or fall back to a different paid provider.

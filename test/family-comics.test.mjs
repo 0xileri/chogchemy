@@ -10,6 +10,8 @@ import { createMemoryFusionStore, createSqliteFusionStore } from '../src/fusion-
 import { createImageGenerator } from '../src/image-generator.mjs';
 import { createApplication } from '../src/application.mjs';
 import { digest } from '../src/art-direction.mjs';
+import { randomBytes } from 'node:crypto';
+import sharp from 'sharp';
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5H0AAAAASUVORK5CYII=', 'base64');
 const comicPng = Buffer.concat([png, Buffer.from('synthetic-comic')]);
@@ -93,14 +95,45 @@ test('comic preparation detects damaged child bytes and does not consume a provi
   assert.equal(f.store.get(child.id).comic.providerStartedAt, undefined);
 });
 
-test('reference payload validation rejects an oversized comic before reserving quota', async () => {
+test('malformed oversized comic references cannot dispatch or consume quota during compression', async () => {
   const f = fixture(), child = await f.child(); let dispatches = 0;
   const imageGenerator = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async () => { dispatches++; throw new Error('Must not call'); } });
   const service = createFusionService({ ...f.config, imageGenerator, loadReference: async () => ({ bytes: Buffer.alloc(1600000), mime: 'image/png' }) });
   await service.generateComic(child.id, address(a)); await service.idle();
   assert.equal(dispatches, 0); assert.equal(service.get(child.id).comic.state, 'ready');
-  assert.match(service.get(child.id).comic.error, /Orbio request limit/);
+  assert.match(service.get(child.id).comic.error, /Could not resize/);
   assert.equal(f.store.get(child.id).comic.providerStartedAt, undefined);
+});
+
+test('oversized family references are compacted before dispatch, preserving the saved child and reference order', async () => {
+  const f = fixture(), child = await f.child();
+  const smallPng = await sharp({ create: { width: 1, height: 1, channels: 3, background: '#ff0099' } }).png().toBuffer();
+  const largeChild = await sharp(randomBytes(1100 * 1100 * 3), { raw: { width: 1100, height: 1100, channels: 3 } }).png().toBuffer();
+  const record = f.store.get(child.id); record.artwork.digest = digest(largeChild);
+  f.store.complete(record, largeChild);
+  let dispatched = 0;
+  const generator = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async (_, options) => {
+    dispatched++; assert.ok(Buffer.byteLength(options.body) < 4000000);
+    const payload = JSON.parse(options.body); assert.equal(payload.input_references.length, 4);
+    const references = payload.input_references.map(r => Buffer.from(r.image_url.url.split(',')[1], 'base64'));
+    const metadata = await Promise.all(references.map(bytes => sharp(bytes).metadata()));
+    assert.deepEqual(metadata.map(m => m.format), ['jpeg', 'jpeg', 'jpeg', 'jpeg']);
+    assert.equal(metadata[2].width, 1024); assert.equal(metadata[2].height, 1024);
+    assert.equal(metadata[0].width, 1); assert.equal(metadata[3].width, 1);
+    return new Response(JSON.stringify({ data: [{ b64_json: comicPng.toString('base64') }] }));
+  } });
+  const direction = { label: 'Test artist', hash: record.artDirectionHash, images: [{ bytes: smallPng, mime: 'image/png' }] };
+  const input = { kind: 'comic', parents: [{ bytes: smallPng, mime: 'image/png' }, { bytes: smallPng, mime: 'image/png' }, { bytes: largeChild, mime: 'image/png' }], artDirection: direction };
+  assert.throws(() => generator.validateInput(input), /exceed/);
+  const service = createFusionService({ ...f.config, artDirection: direction, imageGenerator: generator, loadReference: async (_, tokenId) => ({ tokenId, bytes: smallPng, mime: 'image/png' }) });
+  await service.generateComic(child.id, address(a)); await service.idle();
+  const finished = service.get(child.id);
+  assert.equal(dispatched, 1); assert.equal(finished.comic.state, 'generated');
+  assert.equal(finished.comic.childDigest, digest(largeChild));
+  assert.deepEqual(service.artwork(child.id), largeChild);
+  assert.deepEqual(service.comicArtwork(child.id), comicPng);
+  const small = { ...input, parents: input.parents.map(p => ({ ...p, bytes: png })) };
+  assert.equal(await generator.prepareInput(small), small);
 });
 
 test('comic calls share global and creator limits with fusions, including failures', async () => {
