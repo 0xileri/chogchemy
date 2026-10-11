@@ -52,6 +52,10 @@ function controls() {
   $('my-invitations').hidden = !address;
   $('generate-artwork').hidden = !current?.generationAvailable || !current?.canGenerate || !address || role < 0 || (optionalPartner(current) && address !== current.createdBy);
   $('generate-artwork').disabled = busy;
+  $('generate-comic').hidden = !current?.canGenerateComic;
+  $('generate-comic').disabled = busy;
+  $('cancel-comic').hidden = current?.comic?.state !== 'preparing' || address !== current?.createdBy;
+  $('cancel-comic').disabled = busy;
   if (current?.state === 'preparing' && role >= 0) $('cancel-invitation').hidden = false;
 }
 function render(request) {
@@ -90,12 +94,47 @@ function render(request) {
     $('artwork-caption').textContent = `${request.artwork.mode === 'fixture' ? 'TEST ARTWORK · Synthetic output' : 'AI character artwork'} · Parents #${request.parents.map(p => p.tokenId).join(' + #')} · ${approvalSummary(request)}. An artwork record; no NFT has been minted.`;
     void gallery();
   }
+  renderComic(request);
   clearTimeout(poll);
-  if (['preparing', 'generating'].includes(request.state)) poll = setTimeout(() => { if (!document.hidden && !busy && current?.id === request.id) void load(request.id); else if (current?.id === request.id) render(current); }, 5000);
+  if (['preparing', 'generating'].includes(request.state) || ['preparing', 'generating'].includes(request.comic?.state)) poll = setTimeout(() => { if (!document.hidden && !busy && current?.id === request.id) void load(request.id); else if (current?.id === request.id) render(current); }, 5000);
   const address = getWalletAddress();
   $('invitation-role').textContent = !address ? 'Connect the wallet holding either parent to review and sign.' : request.parents.some(p => p.owner === address) ? 'This wallet is one of the two invited holders.' : 'This wallet is not one of the invited holders. Switch to the wallet holding a listed parent.';
   controls();
 }
+function renderComic(request) {
+  $('family-comic-studio').hidden = !request.artwork;
+  const comic = request.comic;
+  $('comic-result').hidden = !comic?.artwork;
+  $('comic-status').textContent = comic?.error || ({ preparing: 'Preparing the parents and saved child artwork…', generating: 'Drawing your family comic. You can leave and return to this link.', generated: 'Your first family story is saved.', cancelled: 'Preparation cancelled. You can create the comic when ready.' })[comic?.state] || 'Ready for your family’s first story.';
+  $('comic-access').textContent = comic?.artwork ? 'Fictional character story requested by the verified creator. Fusion approvals apply to the original child artwork.' : getWalletAddress() === request.createdBy ? 'One optional image-generation request, counted toward your daily artwork limit. Ownership is checked again before drawing.' : 'The original creator can connect their wallet to create this family comic.';
+  $('comic-record').hidden = !comic;
+  $('comic-record-text').textContent = comic ? `Requested ${new Date(comic.requestedAt).toLocaleString()} · Ownership checked ${new Date(comic.checkedAt).toLocaleString()} · Monad block ${comic.checkedBlock} · Style ${comic.styleLabel} · Style hash ${comic.styleHash} · Child SHA-256 ${comic.childDigest}${comic.artwork ? ` · Comic SHA-256 ${comic.artwork.digest}` : ''}` : '';
+  if (comic?.artwork) {
+    $('comic-image').src = comic.artwork.url;
+    $('download-comic').href = comic.artwork.url;
+    $('view-family').href = request.characterUrl + '#family-comic';
+    $('comic-caption').textContent = `${comic.artwork.mode === 'fixture' ? 'TEST COMIC · Synthetic output' : 'AI family comic'} · Chogs #${request.parents.map(p => p.tokenId).join(' + #')} and their saved fusion child. Artwork only; no new NFT minted.`;
+  }
+}
+$('generate-comic').addEventListener('click', () => void perform(async () => {
+  const id = current?.id, attempt = operation; if (!id) return;
+  status('Checking the family before preparing your comic…');
+  const request = await api(`/api/fusions/${id}/comic`, {});
+  if (attempt !== operation || current?.id !== id) return;
+  render(request); status('Your family comic is underway.');
+}));
+$('cancel-comic').addEventListener('click', () => void perform(async () => {
+  const id = current?.id, attempt = operation; if (!id) return;
+  const request = await api(`/api/fusions/${id}/cancel-comic`, {});
+  if (attempt !== operation || current?.id !== id) return;
+  render(request); status('Comic preparation cancelled. Your child artwork is saved.');
+}));
+$('share-family').addEventListener('click', async () => {
+  const url = current?.characterUrl; if (!url) return;
+  const result = await shareOrCopy(url + '#family-comic', 'Our Chog Family — Chogchemy');
+  if (current?.characterUrl !== url) return;
+  status(({ shared: 'Family comic shared.', copied: 'Public family link copied.', cancelled: 'Sharing cancelled.', manual: 'Open the family page to copy its public link.' })[result]);
+});
 async function load(id, updateUrl = false) {
   const attempt = ++operation;
   status('Loading invitation…'); resetMessage();
@@ -203,7 +242,9 @@ async function gallery() {
       const image = document.createElement('img'); image.src = request.artwork.url; image.loading = 'lazy'; image.alt = `Character from Chogs ${request.parents.map(p => p.tokenId).join(' and ')}`;
       const label = document.createElement('p'); label.textContent = `${request.artwork.mode === 'fixture' ? 'TEST · ' : ''}#${request.parents[0].tokenId} + #${request.parents[1].tokenId}`;
       const approval = document.createElement('p'); approval.textContent = approvalSummary(request);
-      card.append(image, label, approval); $('live-gallery').append(card);
+      card.append(image, label, approval);
+      if (request.comic?.artwork) { const badge = document.createElement('span'); badge.className = 'comic-gallery-badge'; badge.textContent = 'Family comic inside ↗'; card.append(badge); }
+      $('live-gallery').append(card);
     }
     if (!data.artworks.length) $('live-gallery').textContent = 'The first Chog characters will appear here.';
   } catch { $('live-gallery').textContent = 'The gallery is temporarily unavailable.'; }

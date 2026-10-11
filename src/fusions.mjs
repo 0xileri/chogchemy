@@ -3,6 +3,7 @@ import { verifyMessage } from 'viem';
 import { collection } from './chain.mjs';
 import { loadArtDirection, digest, imageMime } from './art-direction.mjs';
 import { loadParentReference } from './reference-assets.mjs';
+import { createFamilyComicService } from './family-comics.mjs';
 
 export class FusionError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -36,6 +37,8 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     if (record.origin !== origin) continue;
     if (record.state === 'preparing') { record.state = 'approved'; record.generation = { error: 'Preparation was interrupted. You can try again.' }; store.put(record); }
     if (record.state === 'generating') { record.state = 'generation_failed'; record.generation.error = 'Generation was interrupted. The provider may have charged this attempt; it will not be retried.'; store.put(record); }
+    if (record.comic?.state === 'preparing') { record.comic.state = 'ready'; record.comic.error = 'Comic preparation was interrupted. You can try again.'; store.put(record); }
+    if (record.comic?.state === 'generating') { record.comic.state = 'failed'; record.comic.error = 'Comic generation was interrupted and may have been charged. It will not be retried.'; store.put(record); }
   }
   // Serialize mutations in this server process, including checks that await the RPC.
   let queue = Promise.resolve();
@@ -84,14 +87,18 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       approvalPolicy: optionalPartner(record) ? 'creator' : 'both_holders',
       createdBy: record.createdBy, creatorVerifiedAt: record.creatorVerifiedAt || null,
       canGenerate: Boolean(address && (optionalPartner(record) ? address === record.createdBy : record.parents.some(p => p.owner === address))),
+      comic: record.comic ? { state: record.comic.state, title: record.comic.title, error: record.comic.error || null, requestedAt: record.comic.requestedAt, checkedAt: record.comic.checkedAt, checkedBlock: record.comic.checkedBlock, styleLabel: record.comic.styleLabel, styleHash: record.comic.styleHash, childDigest: record.comic.childDigest, artwork: record.comic.artwork ? { ...record.comic.artwork, url: `/comics/${record.id}.png` } : null } : null,
+      canGenerateComic: Boolean(address === record.createdBy && record.state === 'generated' && imageGenerator?.configured && (!record.comic || ['ready', 'cancelled'].includes(record.comic.state))),
     };
   }
-  function checkQuota(record, checkConcurrency = true) {
+  function checkQuota(record, checkConcurrency = true, kind = 'fusion') {
     const records = store.all().filter(r => r.origin === origin);
-    if (checkConcurrency && records.filter(r => r.id !== record.id && ['preparing', 'generating'].includes(r.state)).length >= concurrency) fail(429, 'The studio is busy. Try again after another fusion finishes.');
+    const occupied = records.reduce((count, r) => count + Number(['preparing', 'generating'].includes(r.state)) + Number(['preparing', 'generating'].includes(r.comic?.state)), 0);
+    if (checkConcurrency && occupied >= concurrency) fail(429, 'The studio is busy. Try again after another artwork finishes.');
     const day = Math.floor(now() / 86400000) * 86400000;
-    const attempts = records.filter(r => r.generation?.providerStartedAt >= day);
-    if (attempts.length >= dailyLimit || quotaHolders(record).some(holder => attempts.filter(r => quotaHolders(r).includes(holder)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
+    const attempts = records.flatMap(r => [...(r.generation?.providerStartedAt >= day ? [{ holders: quotaHolders(r) }] : []), ...(r.comic?.providerStartedAt >= day ? [{ holders: [r.createdBy] }] : [])]);
+    const holders = kind === 'comic' ? [record.createdBy] : quotaHolders(record);
+    if (attempts.length >= dailyLimit || holders.some(holder => attempts.filter(a => a.holders.includes(holder)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
   }
   async function runGeneration(id) {
     let dispatched = false;
@@ -136,7 +143,11 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       });
     }
   }
+  const comics = createFamilyComicService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   return {
+    generateComic: comics.generate,
+    cancelComic: comics.cancel,
+    comicArtwork: comics.artwork,
     idle() { return Promise.all([...jobs]); },
     gallery() { return store.all().filter(r => r.origin === origin && r.state === 'generated').sort((a, b) => b.artwork.createdAt - a.artwork.createdAt).slice(0, 24).map(r => view(r)); },
     artwork(id) { const record = getRecord(id); if (record.state !== 'generated') fail(404, 'Artwork not found.'); return store.artwork(id); },

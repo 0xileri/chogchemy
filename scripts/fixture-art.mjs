@@ -21,3 +21,34 @@ export function fixtureArt(pink = false) {
   const header=Buffer.alloc(13); header.writeUInt32BE(size); header.writeUInt32BE(size,4); header[8]=8; header[9]=2;
   return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(rows)),chunk('IEND',Buffer.alloc(0))]);
 }
+
+// Three panels of original placeholder shapes for UI testing only, not an AI comic.
+export function fixtureComic() {
+  const size = 768, rows = Buffer.alloc((size * 3 + 1) * size);
+  const ellipse = (x, y, cx, cy, rx, ry) => ((x-cx)/rx)**2 + ((y-cy)/ry)**2 < 1;
+  function chog(x, y, cx, cy, scale, color) {
+    const px = (x-cx)/scale, py = (y-cy)/scale;
+    if (ellipse(px,py,0,0,65,57) || ellipse(px,py,-42,-53,18,34) || ellipse(px,py,42,-53,18,34)) {
+      if (ellipse(px,py,-24,-8,12,15) || ellipse(px,py,24,-8,12,15)) {
+        if (ellipse(px,py,-22,-6,5,9) || ellipse(px,py,22,-6,5,9)) return [36,48,36];
+        return [247,246,237];
+      }
+      if (ellipse(px,py,0,25,12,5)) return [36,48,36];
+      return color;
+    }
+    return null;
+  }
+  for (let y=0; y<size; y++) for (let x=0; x<size; x++) {
+    const panel = Math.floor(y/256), py = y%256;
+    let color = panel === 0 ? [239,243,220] : panel === 1 ? [249,235,222] : [230,241,222];
+    if (x<8 || x>759 || py<8 || py>247) color=[36,48,36];
+    else {
+      if (panel===0 && Math.abs(((x-384)/295)**2+((py-177)/168)**2-1)<.065 && py<177) color=[229,163,183];
+      if (panel===2 && py>205 && x>190 && x<580) color=[229,163,183];
+      color = chog(x,py,260,160,1,[124,164,104]) || chog(x,py,508,160,1,[222,151,168]) || (panel>0 ? chog(x,py,384,190,.58,[217,218,123]) : null) || color;
+    }
+    const offset=y*(size*3+1)+1+x*3; rows[offset]=color[0]; rows[offset+1]=color[1]; rows[offset+2]=color[2];
+  }
+  const header=Buffer.alloc(13); header.writeUInt32BE(size); header.writeUInt32BE(size,4); header[8]=8; header[9]=2;
+  return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(rows)),chunk('IEND',Buffer.alloc(0))]);
+}

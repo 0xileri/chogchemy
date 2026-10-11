@@ -59,9 +59,9 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         res.writeHead(found ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': data.length, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin' });
         res.end(req.method === 'HEAD' ? undefined : data); return;
       }
-      const artworkRoute = url.pathname.match(/^\/artwork\/([a-f0-9]{64})\.png$/);
+      const artworkRoute = url.pathname.match(/^\/(artwork|comics)\/([a-f0-9]{64})\.png$/);
       if (artworkRoute && ['GET', 'HEAD'].includes(req.method)) {
-        const bytes = fusions.artwork(artworkRoute[1]);
+        const bytes = artworkRoute[1] === 'comics' ? fusions.comicArtwork(artworkRoute[2]) : fusions.artwork(artworkRoute[2]);
         if (!bytes) { send(res, 404, { error: 'Artwork not found.' }); return; }
         res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': bytes.length, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
         res.end(req.method === 'HEAD' ? undefined : bytes); return;
@@ -108,7 +108,7 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         res.setHeader('Set-Cookie', cookie(id)); send(res, 200, { address: challenge.address }); return;
       }
       if (req.method === 'GET' && url.pathname === '/api/gallery') { send(res, 200, { artworks: fusions.gallery() }); return; }
-      const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate))?$/);
+      const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate|comic|cancel-comic))?$/);
       if (req.method === 'GET' && fusionRoute && !fusionRoute[2]) { send(res, 200, fusions.get(fusionRoute[1], session?.address)); return; }
       if (!session) { send(res, 401, { error: 'Connect and verify your wallet first.' }); return; }
       if (['GET', 'HEAD'].includes(req.method) && ['/api/chog-preview', '/api/chog-image'].includes(url.pathname)) {
@@ -132,6 +132,8 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         if (action === 'recheck') { send(res, 200, await fusions.recheck(id, session.address)); return; }
         if (action === 'cancel') { send(res, 200, await fusions.cancel(id, session.address)); return; }
         if (action === 'generate') { send(res, 202, await fusions.generate(id, session.address)); return; }
+        if (action === 'comic') { send(res, 202, await fusions.generateComic(id, session.address)); return; }
+        if (action === 'cancel-comic') { send(res, 200, await fusions.cancelComic(id, session.address)); return; }
       }
       if (req.method === 'GET' && url.pathname === '/api/chogs') {
         try {
