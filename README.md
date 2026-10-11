@@ -42,6 +42,8 @@ Without real holders, run `node scripts/preview-test.mjs`, then open http://loca
 
 ## Artist contribution
 
+The Chogchemy identity kit is in [assets/brand/BRAND-GUIDE.md](assets/brand/BRAND-GUIDE.md): transparent logo and icon, social banner, palette, typography, and copy. Open `assets/brand/brand-preview.html` for the visual overview. These branding assets are separate from the artist reference drawings used for character generation.
+
 Edit `art-direction.json` with your partner's style rules. Place up to four approved PNG/JPEG/WebP drawings in `assets/artist/`, then list their filenames in `references`. The house style is currently provisional; no partner artwork is included yet. Restart after changing it.
 
 The style hash covers the rules, version, description and reference image hashes. Existing invitations using a different style cannot generate; create a fresh invitation for new consent. Legacy invitations from before this milestone also need fresh approvals. The Orbio adapter uses its OpenRouter-compatible `/api/v1/images` endpoint with `input_references`, model `openai/gpt-image-2`, one 1024 by 1024 PNG, and medium quality. The model is present in [Orbio's live image catalogue](https://api.orbio.so/api/v1/models?output_modalities=image). The optional direct OpenAI adapter uses its [image edits API](https://developers.openai.com/api/reference/resources/images/methods/edit). Model and quality are configurable per provider. No automatic fallback switches between paid providers. The Orbio request/response contract is covered by mocked tests; live paid generation still needs a fresh locally configured key.
