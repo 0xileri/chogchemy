@@ -42,7 +42,7 @@ Without real holders, run `node scripts/preview-test.mjs`, then open http://loca
 
 ## Artist contribution
 
-The Chogchemy identity kit is in [assets/brand/BRAND-GUIDE.md](assets/brand/BRAND-GUIDE.md): transparent logo and icon, social banner, palette, typography, and copy. Open `assets/brand/brand-preview.html` for the visual overview. These branding assets are separate from the artist reference drawings used for character generation.
+The Chogchemy identity kit is in [assets/brand/BRAND-GUIDE.md](assets/brand/BRAND-GUIDE.md): transparent logo and icon, social banner, palette, typography, and copy. Open `assets/brand/brand-preview.html` for the visual overview. The site uses this identity in its header, hero, parent preview accents, studio banner, footer, favicon, and social metadata. Social image/canonical URLs use the configured app origin. Only the three named PNGs are publicly served at `/brand/`; brand source documents remain private. These branding assets are separate from the artist reference drawings used for character generation.
 
 Edit `art-direction.json` with your partner's style rules. Place up to four approved PNG/JPEG/WebP drawings in `assets/artist/`, then list their filenames in `references`. The house style is currently provisional; no partner artwork is included yet. Restart after changing it.
 

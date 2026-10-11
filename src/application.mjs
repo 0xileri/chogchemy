@@ -9,6 +9,9 @@ import { createChogPreviews } from './chog-previews.mjs';
 const staticFiles = {
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
+  '/brand/chogchemy-logo-v1.png': ['../assets/brand/chogchemy-logo-v1.png', 'image/png'],
+  '/brand/chogchemy-icon-v1.png': ['../assets/brand/chogchemy-icon-v1.png', 'image/png'],
+  '/brand/chogchemy-banner-v1.png': ['../assets/brand/chogchemy-banner-v1.png', 'image/png'],
 };
 const tokenPattern = /^(0|[1-9][0-9]{0,77})$/;
 export function validTokenId(value) { return typeof value === 'string' && tokenPattern.test(value) && BigInt(value) < 2n ** 256n; }
@@ -51,8 +54,9 @@ export function createApplication({ chain = createChain(), fusionStore = createM
       if (!url.pathname.startsWith('/api/')) {
         const file = Object.hasOwn(staticFiles, url.pathname) ? staticFiles[url.pathname] : null;
         if (!file || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(404); res.end('Not found'); return; }
-        const data = await readFile(new URL(`../public/${file[0]}`, import.meta.url));
-        res.writeHead(200, { 'Content-Type': `${file[1]}; charset=utf-8`, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
+        let data = await readFile(new URL(`../public/${file[0]}`, import.meta.url));
+        if (url.pathname === '/') data = Buffer.from(data.toString('utf8').replaceAll('__APP_ORIGIN__', appOrigin.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')));
+        res.writeHead(200, { 'Content-Type': file[1].startsWith('text/') ? `${file[1]}; charset=utf-8` : file[1], 'Content-Length': data.length, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         res.end(req.method === 'HEAD' ? undefined : data); return;
       }
       cleanup();

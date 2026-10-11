@@ -23,7 +23,7 @@ function fixture(overrides = {}) {
     const res = {
       setHeader(key, value) { result.headers[key.toLowerCase()] = value; },
       writeHead(status, headers = {}) { result.status = status; for (const [key, value] of Object.entries(headers)) this.setHeader(key, value); },
-      end(value) { try { result.body = JSON.parse(value); } catch { result.body = value?.toString(); } },
+      end(value) { result.bytes = value; try { result.body = JSON.parse(value); } catch { result.body = value?.toString(); } },
     };
     await app(req, res); return result;
   }
@@ -118,6 +118,24 @@ test('static routes serve the app and reject unexpected paths', async () => {
   const f = fixture();
   for (const path of ['/', '/app.js', '/wallet.js', '/style.css']) assert.equal((await f.request(path)).status, 200);
   for (const path of ['/toString', '/missing', '/.env', '/package.json']) assert.equal((await f.request(path)).status, 404);
+});
+
+test('branding images use binary MIME types and HEAD metadata while source files stay private', async () => {
+  const f = fixture();
+  const page = await f.request('/');
+  assert.doesNotMatch(page.body, /__APP_ORIGIN__/);
+  assert.match(page.body, /content="http:\/\/localhost:3000\/brand\/chogchemy-banner-v1.png"/);
+  for (const name of ['logo', 'icon', 'banner']) {
+    const path = `/brand/chogchemy-${name}-v1.png`, image = await f.request(path);
+    assert.equal(image.status, 200); assert.equal(image.headers['content-type'], 'image/png');
+    assert.deepEqual(image.bytes.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    assert.equal(image.headers['content-length'], image.bytes.length);
+    const head = await f.request(path, { method: 'HEAD' });
+    assert.equal(head.status, 200); assert.equal(head.bytes, undefined);
+    assert.equal(head.headers['content-length'], image.bytes.length);
+  }
+  for (const path of ['/brand/BRAND-GUIDE.md', '/brand/PROMPTS.md', '/assets/brand/chogchemy-logo-v1.png', '/brand/../.env']) assert.equal((await f.request(path)).status, 404);
+  assert.equal(f.calls(), 0);
 });
 test('challenge requests are rate limited', async () => {
   const f = fixture();
