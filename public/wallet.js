@@ -8,7 +8,7 @@ export async function getChogPreview(tokenId) {
   const promise = api(`/api/chog-preview?id=${encodeURIComponent(tokenId)}`).catch(error => { if (previewCache.get(tokenId)?.promise === promise) previewCache.delete(tokenId); throw error; });
   previewCache.set(tokenId, { promise, expires: Date.now() + 30000 }); return promise;
 }
-const status = text => { $('wallet-status').textContent = text; };
+const status = text => { $('wallet-status').textContent = text; $('episode-wallet-status').textContent = text; };
 async function api(path, body) {
   const response = await fetch(path, { credentials: 'same-origin', ...(body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) });
   const data = await response.json();
@@ -58,7 +58,7 @@ async function contextMatches(expectedAddress) {
 async function connect() {
   if (busy) return;
   if (address) { document.getElementById('holder').scrollIntoView({ behavior: 'smooth' }); return; }
-  busy = true; $('connect-wallet').disabled = true; $('connect-wallet-main').disabled = true;
+  busy = true; $('connect-wallet').disabled = true; $('connect-wallet-main').disabled = true; $('connect-wallet-episodes').disabled = true;
   let authenticated = false;
   try {
     if (!window.ethereum?.request) throw new Error('Open this page in a browser with an Ethereum-compatible wallet extension, such as MetaMask or Rabby.');
@@ -101,7 +101,7 @@ async function connect() {
       if (authenticated) try { await api('/api/logout', {}); } catch { /* Server session will expire. */ }
     }
     status(error.code === 4001 ? 'You cancelled the wallet request. Connect again when ready.' : error.message);
-  } finally { busy = false; $('connect-wallet').disabled = false; $('connect-wallet-main').disabled = false; }
+  } finally { busy = false; $('connect-wallet').disabled = false; $('connect-wallet-main').disabled = false; $('connect-wallet-episodes').disabled = false; }
 }
 async function refreshChogs() {
   if (!address) return;
@@ -164,6 +164,7 @@ window.addEventListener('chogchemy:choose-token', () => {
 });
 $('connect-wallet').addEventListener('click', connect);
 $('connect-wallet-main').addEventListener('click', connect);
+$('connect-wallet-episodes').addEventListener('click', connect);
 $('disconnect-wallet').addEventListener('click', disconnect);
 $('refresh-chogs').addEventListener('click', refreshChogs);
 $('lookup-chog').addEventListener('submit', event => { event.preventDefault(); void lookup(); });

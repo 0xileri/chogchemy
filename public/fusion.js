@@ -180,6 +180,8 @@ function episodeControls() {
   const progress = episodes.some(e => ['preparing', 'generating'].includes(e.state));
   const atLimit = !!drawingUsage && (!drawingUsage.remaining || !drawingUsage.globalRemaining);
   $('episode-creator').hidden = !current?.canGenerateEpisode || !address;
+  $('connect-wallet-episodes').hidden = !!address || !current?.comic?.artwork;
+  $('episode-wallet-status').hidden = !!address || !current?.comic?.artwork;
   $('generate-episode').hidden = !available;
   $('generate-episode').disabled = busy || atLimit || progress || !current?.canGenerateEpisode || !$('episode-story').value;
   $('generate-episode').textContent = comicAction === 'episode' ? 'Checking your family…' : 'Create the next episode ✳';
