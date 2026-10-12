@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createApplication } from '../src/application.mjs';
-import { fixtureArt, fixtureComic } from './fixture-art.mjs';
+import { fixtureArt, fixtureComic, fixtureStickerSheet } from './fixture-art.mjs';
 
 const accounts = [privateKeyToAccount(generatePrivateKey()), privateKeyToAccount(generatePrivateKey())];
 const origin = 'http://localhost:3091';
@@ -19,7 +19,7 @@ const fixturePng = fixtureArt(true);
 const app = createApplication({ chain, origin, generationOptions: {
   holderDailyLimit: 4,
   loadReference: async (_, tokenId) => ({ tokenId, bytes: fixturePng, mime: 'image/png', name: 'Synthetic parent', traits: [] }),
-  imageGenerator: { configured: true, mode: 'fixture', model: 'synthetic-test', async generate({ kind }) { return { bytes: kind === 'comic' ? fixtureComic() : fixturePng, mode: 'fixture', model: 'synthetic-test' }; } },
+  imageGenerator: { configured: true, mode: 'fixture', model: 'synthetic-test', async generate({ kind }) { return { bytes: kind === 'stickers' ? await fixtureStickerSheet() : kind === 'comic' ? fixtureComic() : fixturePng, mode: 'fixture', model: 'synthetic-test' }; } },
 } });
 const html = (await readFile(new URL('../public/index.html', import.meta.url), 'utf8')).replaceAll('__APP_ORIGIN__', origin).replace('<body>', `<body><aside style="padding:16px;background:#ffe7a0;color:#302600;position:relative">LOCAL TEST FIXTURE · Synthetic wallets and NFTs only. <button id="test-a">Test wallet A</button> <button id="test-b">Test wallet B</button> <span id="test-account">Wallet A selected</span></aside><script>
 let slot = 0; const accounts = ${JSON.stringify(accounts.map(a => a.address))}; const listeners = new Map();

@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export function createMemoryFusionStore() {
-  const records = new Map(), images = new Map(), comics = new Map(), episodes = new Map();
+  const records = new Map(), images = new Map(), comics = new Map(), episodes = new Map(), stickers = new Map();
   return {
     get(id) { return records.has(id) ? structuredClone(records.get(id)) : null; },
     put(record) { records.set(record.id, structuredClone(record)); },
@@ -14,6 +14,8 @@ export function createMemoryFusionStore() {
     comicArtwork(id) { return comics.has(id) ? Buffer.from(comics.get(id)) : null; },
     completeEpisode(record, episodeId, bytes) { records.set(record.id, structuredClone(record)); episodes.set(record.id + ':' + episodeId, Buffer.from(bytes)); },
     episodeArtwork(id, episodeId) { const bytes = episodes.get(id + ':' + episodeId); return bytes ? Buffer.from(bytes) : null; },
+    completeStickerPack(record, assets) { records.set(record.id, structuredClone(record)); for (const [name, bytes] of Object.entries(assets)) stickers.set(record.id + ':' + name, Buffer.from(bytes)); },
+    stickerAsset(id, name) { const bytes = stickers.get(id + ':' + name); return bytes ? Buffer.from(bytes) : null; },
     activeCount(address, now) { return [...records.values()].filter(r => (!address || r.createdBy === address) && r.expires > now && ['awaiting_approvals', 'approved'].includes(r.state)).length; },
     list(address) { return [...records.values()].filter(r => r.parents.some(p => p.owner === address)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 30).map(r => structuredClone(r)); },
     close() {},
@@ -29,7 +31,8 @@ export function createSqliteFusionStore(path) {
     CREATE INDEX IF NOT EXISTS fusions_creator ON fusions(creator, expires);
     CREATE TABLE IF NOT EXISTS artworks (request_id TEXT PRIMARY KEY REFERENCES fusions(id), bytes BLOB NOT NULL);
     CREATE TABLE IF NOT EXISTS comics (request_id TEXT PRIMARY KEY REFERENCES fusions(id), bytes BLOB NOT NULL);
-    CREATE TABLE IF NOT EXISTS family_episodes (request_id TEXT NOT NULL REFERENCES fusions(id), episode_id TEXT NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY(request_id, episode_id));`);
+    CREATE TABLE IF NOT EXISTS family_episodes (request_id TEXT NOT NULL REFERENCES fusions(id), episode_id TEXT NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY(request_id, episode_id));
+    CREATE TABLE IF NOT EXISTS family_stickers (request_id TEXT NOT NULL REFERENCES fusions(id), name TEXT NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY(request_id, name));`);
   const get = db.prepare('SELECT payload FROM fusions WHERE id = ?');
   const put = db.prepare('INSERT INTO fusions (id, creator, expires, state, payload) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET state=excluded.state, payload=excluded.payload');
   const count = db.prepare("SELECT COUNT(*) AS count FROM fusions WHERE expires > ? AND state IN ('awaiting_approvals', 'approved') AND (? IS NULL OR creator = ?)");
@@ -41,6 +44,8 @@ export function createSqliteFusionStore(path) {
   const saveComic = db.prepare('INSERT INTO comics(request_id, bytes) VALUES (?, ?)');
   const episodeImage = db.prepare('SELECT bytes FROM family_episodes WHERE request_id = ? AND episode_id = ?');
   const saveEpisode = db.prepare('INSERT INTO family_episodes(request_id, episode_id, bytes) VALUES (?, ?, ?)');
+  const stickerImage = db.prepare('SELECT bytes FROM family_stickers WHERE request_id = ? AND name = ?');
+  const saveSticker = db.prepare('INSERT INTO family_stickers(request_id, name, bytes) VALUES (?, ?, ?)');
   return {
     get(id) { const row = get.get(id); return row ? JSON.parse(row.payload) : null; },
     put(record) { put.run(record.id, record.createdBy, record.expires, record.state, JSON.stringify(record)); },
@@ -48,6 +53,12 @@ export function createSqliteFusionStore(path) {
     artwork(id) { const row = image.get(id); return row ? Buffer.from(row.bytes) : null; },
     comicArtwork(id) { const row = comicImage.get(id); return row ? Buffer.from(row.bytes) : null; },
     episodeArtwork(id, episodeId) { const row = episodeImage.get(id, episodeId); return row ? Buffer.from(row.bytes) : null; },
+    stickerAsset(id, name) { const row = stickerImage.get(id, name); return row ? Buffer.from(row.bytes) : null; },
+    completeStickerPack(record, assets) {
+      db.exec('BEGIN IMMEDIATE');
+      try { put.run(record.id, record.createdBy, record.expires, record.state, JSON.stringify(record)); for (const [name, bytes] of Object.entries(assets)) saveSticker.run(record.id, name, bytes); db.exec('COMMIT'); }
+      catch (error) { db.exec('ROLLBACK'); throw error; }
+    },
     completeEpisode(record, episodeId, bytes) {
       db.exec('BEGIN IMMEDIATE');
       try { put.run(record.id, record.createdBy, record.expires, record.state, JSON.stringify(record)); saveEpisode.run(record.id, episodeId, bytes); db.exec('COMMIT'); }

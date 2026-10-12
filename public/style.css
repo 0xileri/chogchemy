@@ -53,3 +53,8 @@ footer{align-items:center;gap:24px}.footer-brand{width:190px;height:42px}footer 
 .episode-card { padding: 1.5rem; background: #f7f6ed; border: 1px solid #d9dfce; border-radius: 18px; }
 .episode-card h4 { font-size: 1.3rem; margin: 0 0 1rem; }
 .episode-card img { display: block; max-width: 100%; width: 760px; height: auto; border-radius: 14px; margin-top: 1rem; }
+.sticker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.sticker-card { min-width: 0; padding: 1rem; background: #fff; border: 1px solid #d9dfce; border-radius: 18px; }
+.sticker-card img { width: 100%; height: auto; display: block; background-color: #f7f6ed; background-image: linear-gradient(45deg,#e7eadf 25%,transparent 25%),linear-gradient(-45deg,#e7eadf 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e7eadf 75%),linear-gradient(-45deg,transparent 75%,#e7eadf 75%); background-size: 20px 20px; background-position: 0 0,0 10px,10px -10px,-10px 0; border-radius: 12px; }
+.sticker-card h3,.sticker-card h4 { margin: .75rem 0; font-size: 1rem; overflow-wrap: anywhere; }
+@media (max-width: 700px) { .sticker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sticker-card { padding: .6rem; } }

@@ -5,6 +5,7 @@ import { loadArtDirection, digest, imageMime } from './art-direction.mjs';
 import { loadParentReference } from './reference-assets.mjs';
 import { createFamilyComicService } from './family-comics.mjs';
 import { createFamilyEpisodeService, episodeStories } from './family-episodes.mjs';
+import { createFamilyStickerService } from './family-stickers.mjs';
 
 export class FusionError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -40,6 +41,8 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     if (record.state === 'generating') { record.state = 'generation_failed'; record.generation.error = 'Generation was interrupted. The provider may have charged this attempt; it will not be retried.'; store.put(record); }
     if (record.comic?.state === 'preparing') { record.comic.state = 'ready'; record.comic.error = 'Comic preparation was interrupted. You can try again.'; store.put(record); }
     if (record.comic?.state === 'generating') { record.comic.state = 'failed'; record.comic.error = 'Comic generation was interrupted and may have been charged. It will not be retried.'; store.put(record); }
+    if (record.stickers?.state === 'preparing') { record.stickers.state = 'ready'; record.stickers.error = 'Sticker preparation was interrupted. You can try again.'; store.put(record); }
+    if (record.stickers?.state === 'generating') { record.stickers.state = 'failed'; record.stickers.error = 'Sticker generation was interrupted and may have been charged. It will not be retried.'; store.put(record); }
     for (const episode of record.episodes || []) {
       if (episode.state === 'preparing') { episode.state = 'ready'; episode.error = 'Episode preparation was interrupted. You can try again.'; store.put(record); }
       if (episode.state === 'generating') { episode.state = 'failed'; episode.error = 'Episode generation was interrupted and may have been charged. It will not be retried.'; store.put(record); }
@@ -97,12 +100,14 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       episodeChoices: episodeStories.map(({ id, title, chapters }) => ({ id, title, chapters })),
       episodes: (record.episodes || []).map(e => ({ id: e.id, number: e.number, storyId: e.storyId, title: e.title, chapters: e.chapters, state: e.state, error: e.error || null, requestedAt: e.requestedAt, checkedAt: e.checkedAt, checkedBlock: e.checkedBlock, styleLabel: e.styleLabel, styleHash: e.styleHash, childDigest: e.childDigest, artwork: e.artwork ? { ...e.artwork, url: `/episodes/${record.id}/${e.id}.png` } : null })),
       canGenerateEpisode: Boolean(address === record.createdBy && record.state === 'generated' && record.comic?.state === 'generated' && imageGenerator?.configured),
+      stickers: record.stickers ? { state: record.stickers.state, error: record.stickers.error || null, requestedAt: record.stickers.requestedAt, checkedAt: record.stickers.checkedAt, checkedBlock: record.stickers.checkedBlock, styleLabel: record.stickers.styleLabel, styleHash: record.stickers.styleHash, childDigest: record.stickers.childDigest, artwork: record.stickers.artwork ? { ...record.stickers.artwork, zipUrl: `/stickers/${record.id}/pack.zip`, items: record.stickers.artwork.items.map(item => ({ ...item, url: `/stickers/${record.id}/${item.id}.png` })) } : null } : null,
+      canGenerateStickers: Boolean(address === record.createdBy && record.state === 'generated' && imageGenerator?.configured && (!record.stickers || ['ready', 'cancelled'].includes(record.stickers.state))),
     };
   }
   function quotaUsage() {
     const records = store.all().filter(r => r.origin === origin);
     const day = Math.floor(now() / 86400000) * 86400000;
-    const attempts = records.flatMap(r => [...(r.generation?.providerStartedAt >= day ? [{ holders: quotaHolders(r) }] : []), ...(r.comic?.providerStartedAt >= day ? [{ holders: [r.createdBy] }] : []), ...(r.episodes || []).filter(e => e.providerStartedAt >= day).map(() => ({ holders: [r.createdBy] }))]);
+    const attempts = records.flatMap(r => [...(r.generation?.providerStartedAt >= day ? [{ holders: quotaHolders(r) }] : []), ...(r.comic?.providerStartedAt >= day ? [{ holders: [r.createdBy] }] : []), ...(r.stickers?.providerStartedAt >= day ? [{ holders: [r.createdBy] }] : []), ...(r.episodes || []).filter(e => e.providerStartedAt >= day).map(() => ({ holders: [r.createdBy] }))]);
     return { records, day, attempts };
   }
   function usage(address) {
@@ -112,7 +117,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
   }
   function checkQuota(record, checkConcurrency = true, kind = 'fusion') {
     const { records, attempts } = quotaUsage();
-    const occupied = records.reduce((count, r) => count + Number(['preparing', 'generating'].includes(r.state)) + Number(['preparing', 'generating'].includes(r.comic?.state)) + (r.episodes || []).filter(e => ['preparing', 'generating'].includes(e.state)).length, 0);
+    const occupied = records.reduce((count, r) => count + Number(['preparing', 'generating'].includes(r.state)) + Number(['preparing', 'generating'].includes(r.comic?.state)) + Number(['preparing', 'generating'].includes(r.stickers?.state)) + (r.episodes || []).filter(e => ['preparing', 'generating'].includes(e.state)).length, 0);
     if (checkConcurrency && occupied >= concurrency) fail(429, 'The studio is busy. Try again after another artwork finishes.');
     const holders = kind === 'comic' ? [record.createdBy] : quotaHolders(record);
     if (attempts.length >= dailyLimit || holders.some(holder => attempts.filter(a => a.holders.includes(holder)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
@@ -162,6 +167,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
   }
   const comics = createFamilyComicService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   const episodes = createFamilyEpisodeService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
+  const stickers = createFamilyStickerService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   return {
     usage,
     generateComic: comics.generate,
@@ -170,6 +176,9 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     generateEpisode: episodes.generate,
     cancelEpisode: episodes.cancel,
     episodeArtwork: episodes.artwork,
+    generateStickers: stickers.generate,
+    cancelStickers: stickers.cancel,
+    stickerAsset: stickers.asset,
     idle() { return Promise.all([...jobs]); },
     gallery() { return store.all().filter(r => r.origin === origin && r.state === 'generated').sort((a, b) => b.artwork.createdAt - a.artwork.createdAt).slice(0, 24).map(r => view(r)); },
     artwork(id) { const record = getRecord(id); if (record.state !== 'generated') fail(404, 'Artwork not found.'); return store.artwork(id); },

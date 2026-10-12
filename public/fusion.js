@@ -10,16 +10,19 @@ const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const active = request => ['awaiting_approvals', 'approved'].includes(request.state) && request.expires > Date.now();
 const optionalPartner = request => request.approvalPolicy === 'creator';
 const creationState = request => {
+  if (['preparing', 'generating'].includes(request.stickers?.state)) return 'Child saved · Sticker pack drawing';
+  if (request.stickers?.artwork && !request.comic?.artwork) return 'Child + stickers saved · No comic yet';
   if ((request.episodes || []).some(e => ['preparing', 'generating'].includes(e.state))) return 'Family saved · New episode drawing';
   const count = (request.episodes || []).filter(e => e.artwork).length;
   if (count) return `Family saved · ${count} extra episode${count === 1 ? '' : 's'}`;
+  if (request.stickers?.artwork && request.comic?.artwork) return 'Child + comic + stickers saved';
   return request.comic?.artwork ? 'Child + comic saved' : request.artwork ? ['preparing', 'generating'].includes(request.comic?.state) ? 'Child saved · Comic drawing' : request.comic?.state === 'failed' ? 'Child saved · Comic failed' : 'Child saved · Comic not created' : ({ approved: 'Ready to create the child', awaiting_approvals: 'Waiting for approval', preparing: 'Preparing the child', generating: 'Drawing the child', generation_failed: 'Child drawing failed', cancelled: 'Cancelled', expired: 'Expired', invalidated: 'Parent ownership changed' })[request.state] || 'Work in progress';
 };
 const resetTime = () => new Date(drawingUsage?.resetsAt || (Math.floor(Date.now() / 86400000) + 1) * 86400000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 function budgetText() {
   if (!drawingUsage) return '';
   if (!drawingUsage.remaining || !drawingUsage.globalRemaining) return `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.`;
-  return `${drawingUsage.remaining} of ${drawingUsage.limit} drawing requests left today. Each child, comic, or new episode uses one request.`;
+  return `${drawingUsage.remaining} of ${drawingUsage.limit} drawing requests left today. Each child, comic, episode, or six-sticker pack uses one request.`;
 }
 async function refreshUsage() {
   const address = getWalletAddress(); if (!address) return;
@@ -75,7 +78,7 @@ function controls() {
   $('start-new-family').disabled = busy;
   $('drawing-usage').hidden = !address;
   $('drawing-remaining').textContent = drawingUsage ? `${drawingUsage.remaining} drawing request${drawingUsage.remaining === 1 ? '' : 's'} left today` : 'Checking your drawing allowance…';
-  $('drawing-usage-note').textContent = drawingUsage ? `${drawingUsage.used} of ${drawingUsage.limit} used. One request per child, comic, or episode. Resets ${resetTime()} (your local time).${!drawingUsage.globalRemaining ? ' The studio-wide daily limit is also used up.' : ''}` : 'Your allowance appears here after wallet verification.';
+  $('drawing-usage-note').textContent = drawingUsage ? `${drawingUsage.used} of ${drawingUsage.limit} used. One request per child, comic, episode, or sticker pack. Resets ${resetTime()} (your local time).${!drawingUsage.globalRemaining ? ' The studio-wide daily limit is also used up.' : ''}` : 'Your allowance appears here after wallet verification.';
   for (const id of ['child-budget', 'comic-budget']) { $(id).hidden = !address || !drawingUsage; $(id).textContent = budgetText(); }
   $('child-budget').hidden ||= current?.state !== 'approved';
   $('comic-budget').hidden ||= !current?.canGenerateComic;
@@ -100,10 +103,11 @@ function controls() {
   $('cancel-comic').hidden = current?.comic?.state !== 'preparing' || address !== current?.createdBy;
   $('cancel-comic').disabled = busy;
   episodeControls();
+  stickerControls();
   if (current?.state === 'preparing' && role >= 0) $('cancel-invitation').hidden = false;
 }
 function render(request) {
-  if (current?.id !== request.id) { comicError(''); episodeError(''); }
+  if (current?.id !== request.id) { comicError(''); episodeError(''); stickerError(''); }
   current = request; resetMessage(); $('invitation-card').hidden = false;
   $('invitation-link').value = request.invitationUrl;
   $('invitation-state').textContent = creationState(request);
@@ -134,7 +138,8 @@ function render(request) {
   $('child-next').hidden = !request.artwork;
   const comicDrawing = ['preparing', 'generating'].includes(request.comic?.state);
   $('child-next-title').textContent = request.comic?.artwork ? 'Your child and comic are saved.' : comicDrawing ? 'Your comic is being drawn.' : 'Next: create the family comic.';
-  $('child-next-note').textContent = request.comic?.artwork ? 'Open or download your comic in step 3 below.' : comicDrawing ? 'The child is saved. Your comic will appear below when it is ready.' : 'The child is one artwork. The comic is a separate drawing you start in step 3.';
+  $('child-next-note').textContent = request.comic?.artwork ? 'Open your comic below, or make a sticker pack for chats.' : comicDrawing ? 'The child is saved. Your comic will appear below when it is ready.' : 'The child is one artwork. A comic or sticker pack is a separate drawing you can choose next.';
+  $('next-stickers').textContent = request.stickers?.artwork ? 'See my stickers ↓' : 'Make chat stickers ↓';
   $('next-comic').textContent = request.comic?.artwork ? 'See my comic ↓' : comicDrawing ? 'Check comic progress ↓' : 'Go to the comic ↓';
   $('generated-result').hidden = !request.artwork;
   if (request.artwork) {
@@ -146,8 +151,9 @@ function render(request) {
     void listMine();
   }
   renderComic(request);
+  renderStickers(request);
   clearTimeout(poll);
-  if (['preparing', 'generating'].includes(request.state) || ['preparing', 'generating'].includes(request.comic?.state) || (request.episodes || []).some(e => ['preparing', 'generating'].includes(e.state))) poll = setTimeout(() => { if (!document.hidden && !busy && current?.id === request.id) void load(request.id); else if (current?.id === request.id) render(current); }, 5000);
+  if (['preparing', 'generating'].includes(request.state) || ['preparing', 'generating'].includes(request.comic?.state) || ['preparing', 'generating'].includes(request.stickers?.state) || (request.episodes || []).some(e => ['preparing', 'generating'].includes(e.state))) poll = setTimeout(() => { if (!document.hidden && !busy && current?.id === request.id) void load(request.id); else if (current?.id === request.id) render(current); }, 5000);
   const address = getWalletAddress();
   $('invitation-role').textContent = !address ? 'Connect the wallet holding either parent to review and sign.' : request.parents.some(p => p.owner === address) ? 'This wallet is one of the two invited holders.' : 'This wallet is not one of the invited holders. Switch to the wallet holding a listed parent.';
   controls();
@@ -174,6 +180,50 @@ function renderComic(request) {
   renderEpisodes(request);
 }
 function episodeError(text) { $('episode-error').textContent = text; $('episode-error').hidden = !text; }
+function stickerError(text) { $('sticker-error').textContent = text; $('sticker-error').hidden = !text; }
+function stickerControls() {
+  const address = getWalletAddress(), atLimit = !!drawingUsage && (!drawingUsage.remaining || !drawingUsage.globalRemaining);
+  $('generate-stickers').hidden = !current?.canGenerateStickers || !address;
+  $('generate-stickers').disabled = busy || atLimit;
+  $('generate-stickers').textContent = comicAction === 'stickers' ? 'Checking your family…' : current?.stickers?.state === 'ready' ? 'Try preparing my sticker pack again ✳' : 'Create my sticker pack ✳';
+  $('cancel-stickers').hidden = current?.stickers?.state !== 'preparing' || address !== current?.createdBy;
+  $('cancel-stickers').disabled = busy;
+  $('sticker-budget').hidden = !address || !drawingUsage || !current?.canGenerateStickers;
+  $('sticker-budget').textContent = budgetText();
+  $('connect-wallet-stickers').hidden = !!address || !current?.artwork || !!current?.stickers?.artwork;
+  $('sticker-wallet-status').hidden = $('connect-wallet-stickers').hidden;
+}
+function renderStickers(request) {
+  const pack = request.stickers;
+  $('family-stickers-studio').hidden = !request.artwork;
+  $('sticker-result').hidden = !pack?.artwork;
+  $('sticker-status').textContent = pack?.error || ({ preparing: 'Preparing your Chog family. No stickers are saved yet; you can still cancel.', generating: 'Drawing and preparing six stickers. This can take a few minutes. Return through My creations to check progress.', generated: 'All six stickers are saved. Pick one below or download the whole pack.', cancelled: 'Preparation cancelled. Your family artwork is still saved.' })[pack?.state] || 'No sticker pack yet. Create one from your saved family.';
+  $('sticker-access').textContent = pack?.artwork ? pack.artwork.mode === 'fixture' ? 'A saved test pack. These are synthetic images, not minted NFTs.' : 'One saved pack per family. These are AI-generated images, not minted NFTs.' : getWalletAddress() === request.createdBy ? 'Uses one drawing request for all six stickers. Both parent owners are checked again.' : 'Connect the wallet that created this family to make its sticker pack.';
+  $('sticker-grid').replaceChildren();
+  if (pack?.artwork) {
+    $('sticker-caption').textContent = pack.artwork.mode === 'fixture' ? 'TEST STICKERS · Synthetic output, not AI artwork.' : 'AI stickers in our artist-guided family style · Transparent 512 × 512 PNGs.';
+    for (const item of pack.artwork.items) {
+      const card = document.createElement('article'), title = document.createElement('h4'), image = document.createElement('img'), link = document.createElement('a');
+      card.className = 'sticker-card'; title.textContent = item.name; image.src = item.url; image.alt = `${item.name} reaction from your Chog family`; image.loading = 'lazy';
+      link.className = 'text-link'; link.href = item.url; link.download = `chogchemy-${item.id}.png`; link.textContent = 'Download PNG ↓';
+      card.append(image, title, link); $('sticker-grid').append(card);
+    }
+    $('download-sticker-pack').href = pack.artwork.zipUrl; $('view-stickers').href = request.characterUrl + '#family-stickers';
+  }
+}
+$('generate-stickers').addEventListener('click', () => void perform(async () => {
+  const id = current?.id, attempt = operation; if (!id) return;
+  status('Checking your family before preparing its sticker pack…');
+  const request = await api(`/api/fusions/${id}/stickers`, {});
+  if (attempt !== operation || current?.id !== id) return;
+  render(request); status('Your sticker pack is underway. All six use one drawing request.');
+}, 'stickers'));
+$('cancel-stickers').addEventListener('click', () => void perform(async () => {
+  const id = current?.id, attempt = operation; if (!id) return;
+  const request = await api(`/api/fusions/${id}/cancel-stickers`, {});
+  if (attempt !== operation || current?.id !== id) return;
+  render(request); status('Sticker preparation cancelled. Your saved artwork is safe.');
+}, 'stickers'));
 function episodeControls() {
   const address = getWalletAddress(), episodes = current?.episodes || [];
   const available = (current?.episodeChoices || []).some(choice => !episodes.some(e => e.storyId === choice.id && !['ready', 'cancelled'].includes(e.state)));
@@ -273,7 +323,7 @@ async function load(id, updateUrl = false) {
     if (attempt !== operation) return;
     render(request);
     if (updateUrl) { const url = new URL(location.href); url.searchParams.set('fusion', request.id); url.hash = 'fusion'; history.replaceState(null, '', url); }
-    status(request.artwork ? request.comic?.artwork ? 'Your child and comic are saved below.' : 'Your child is saved. Continue to step 3 to create its comic.' : request.state === 'approved' ? 'Parents checked. Click “Create the child” below.' : 'Creation opened. Check its progress below.');
+    status(request.artwork ? request.stickers?.artwork ? 'Your child and stickers are saved below.' : request.comic?.artwork ? 'Your child and comic are saved below.' : 'Your child is saved. Continue to step 3 to create its comic, or make stickers.' : request.state === 'approved' ? 'Parents checked. Click “Create the child” below.' : 'Creation opened. Check its progress below.');
   } catch (error) { if (attempt === operation) { current = null; $('invitation-card').hidden = true; status(error.message); controls(); } }
 }
 async function listMine() {
@@ -288,7 +338,7 @@ async function listMine() {
       link.href = request.invitationUrl;
       const title = document.createElement('strong'); title.textContent = `Chogs #${request.parents[0].tokenId} + #${request.parents[1].tokenId}`;
       const state = document.createElement('span'); state.textContent = creationState(request);
-      const action = document.createElement('span'); action.className = 'saved-action'; action.textContent = request.episodes?.length ? 'Open family & episodes ↗' : request.comic?.artwork ? 'Open child & comic ↗' : request.comic?.state === 'failed' ? 'Open child / View comic error ↗' : request.artwork ? 'Open child / Create comic ↗' : 'Continue creation ↗';
+      const action = document.createElement('span'); action.className = 'saved-action'; action.textContent = request.stickers?.artwork ? 'Open family & stickers ↗' : request.episodes?.length ? 'Open family & episodes ↗' : request.comic?.artwork ? 'Open child & comic ↗' : request.comic?.state === 'failed' ? 'Open child / View comic error ↗' : request.artwork ? 'Open child / Create comic ↗' : 'Continue creation ↗';
       link.append(title, state, action);
       link.addEventListener('click', event => { event.preventDefault(); if (busy) return; choosingNew = false; void load(request.id, true).then(() => (current?.artwork ? $('child-next') : $('invitation-card')).scrollIntoView({ behavior: 'smooth' })); });
       $('invitation-list').append(link);
@@ -301,14 +351,14 @@ async function perform(work, familyAction = null) {
   if (busy) return;
   const comicId = familyAction ? current?.id : null;
   comicAction = familyAction;
-  if (familyAction) { comicError(''); episodeError(''); }
+  if (familyAction) { comicError(''); episodeError(''); stickerError(''); }
   busy = true; controls();
   const attempt = operation;
   try { await work(); }
   catch (error) {
-    const errorText = error.status === 401 ? 'Your wallet session expired. Connect and sign in again, then create your family comic.' : /daily artwork limit/i.test(error.message) ? `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.` : error.message;
+    const errorText = error.status === 401 ? 'Your wallet session expired. Connect and sign in again to continue creating.' : /daily artwork limit/i.test(error.message) ? `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.` : error.message;
     // A 401 clears the wallet and advances operation; still explain it beside this comic.
-    if (familyAction && current?.id === comicId && (attempt === operation || (error.status === 401 && !getWalletAddress()))) { if (familyAction === 'episode') episodeError(errorText); else comicError(errorText); }
+    if (familyAction && current?.id === comicId && (attempt === operation || (error.status === 401 && !getWalletAddress()))) { if (familyAction === 'stickers') stickerError(errorText); else if (familyAction === 'episode') episodeError(errorText); else comicError(errorText); }
     if (attempt === operation) {
       if (error.status === 409 && current) await load(current.id);
       status(error.code === 4001 ? 'Approval cancelled in your wallet. Nothing was signed or saved.' : errorText);
@@ -333,7 +383,7 @@ $('new-fusion').addEventListener('submit', event => {
 });
 $('start-new-family').addEventListener('click', () => {
   if (busy || !getWalletAddress()) return;
-  choosingNew = true; operation++; current = null; resetMessage(); comicError(''); episodeError(''); clearTimeout(poll);
+  choosingNew = true; operation++; current = null; resetMessage(); comicError(''); episodeError(''); stickerError(''); clearTimeout(poll);
   $('invitation-card').hidden = true;
   $('fusion-parent-b').value = ''; previewParent('b', true);
   const url = new URL(location.href); url.searchParams.delete('fusion'); url.hash = 'fusion'; history.replaceState(null, '', url);
@@ -433,6 +483,6 @@ window.addEventListener('chogchemy:wallet', () => {
 controls();
 const initialId = new URL(location.href).searchParams.get('fusion');
 if (initialId) void load(initialId).then(() => {
-  const target = location.hash === '#family-episodes-studio' && !$('family-episodes-studio').hidden ? $('family-episodes-studio') : $('fusion');
+  const target = location.hash === '#family-stickers-studio' && !$('family-stickers-studio').hidden ? $('family-stickers-studio') : location.hash === '#family-episodes-studio' && !$('family-episodes-studio').hidden ? $('family-episodes-studio') : $('fusion');
   target.scrollIntoView({ behavior: 'smooth' });
 });

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check src/application.mjs && node --check src/chain.mjs && node --check src/fusions.mjs && node --check src/fusion-store.mjs && node --check public/app.js && node --check public/wallet.js && node --check public/fusion.js && node --check public/character.js && node --check public/share.js && node --check src/character-page.mjs && node --check src/art-direction.mjs && node --check src/reference-assets.mjs && node --check src/image-generator.mjs && node --check src/owner-discovery.mjs && node --check src/chog-previews.mjs && node --check src/family-comics.mjs && node --check src/family-episodes.mjs",
+    "check": "node --check server.mjs && node --check src/application.mjs && node --check src/chain.mjs && node --check src/fusions.mjs && node --check src/fusion-store.mjs && node --check public/app.js && node --check public/wallet.js && node --check public/fusion.js && node --check public/character.js && node --check public/share.js && node --check src/character-page.mjs && node --check src/art-direction.mjs && node --check src/reference-assets.mjs && node --check src/image-generator.mjs && node --check src/owner-discovery.mjs && node --check src/chog-previews.mjs && node --check src/family-comics.mjs && node --check src/family-episodes.mjs && node --check src/family-stickers.mjs && node --check src/sticker-assets.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "engines": {

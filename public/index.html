@@ -26,7 +26,7 @@
 <main id="main-content">
 <section class="intro">
 <div class="intro-copy"><span class="eyebrow">YOUR CHOGS. THEIR FAMILY STORY.</span><h1>Turn two Chogs<br>into a <em>family.</em></h1>
-<p>Choose two Chog NFTs. Create their child, then draw a comic of their family's first story.</p>
+<p>Choose two Chog NFTs. Create their child, then make family comics and sticker packs for chats.</p>
 <div class="intro-actions"><a class="button" href="#holder">Start my family ↗</a><a class="sample-link" href="/demo">Try the demo first</a></div>
 <span class="note">You need one Chog Genesis NFT to create. The demo needs no wallet.</span>
 </div>
@@ -80,7 +80,7 @@
 <div class="controls"><button id="review-approval" type="button" hidden>Review my approval</button><button id="recheck-invitation" class="secondary" type="button" hidden>Recheck ownership</button><button id="cancel-invitation" class="secondary" type="button" hidden>Cancel this creation</button></div>
 <div id="approval-review" hidden><h3>Read before you sign.</h3><pre id="approval-message"></pre><label class="consent"><input id="approval-confirm" type="checkbox"> I approve this one fusion using the listed parents and art direction.</label><button id="sign-fusion" type="button" disabled>Sign fusion approval</button></div>
 <p id="ready-note" hidden></p><p id="child-budget" class="note" hidden></p><button id="generate-artwork" type="button" hidden>Create the child ✳</button><p id="generation-note" role="status" hidden></p>
-<div id="child-next" class="next-step" hidden><div><span class="eyebrow">CHILD SAVED</span><h3 id="child-next-title">Next: create the family comic.</h3><p id="child-next-note">The child is one artwork. The comic is a separate drawing you start in step 3.</p></div><a id="next-comic" class="button" href="#family-comic-studio">Go to the comic ↓</a></div>
+<div id="child-next" class="next-step" hidden><div><span class="eyebrow">CHILD SAVED</span><h3 id="child-next-title">Next: create the family comic.</h3><p id="child-next-note">The child is one artwork. The comic and sticker pack are separate drawings.</p></div><a id="next-comic" class="button" href="#family-comic-studio">Go to the comic ↓</a><a id="next-stickers" class="button secondary" href="#family-stickers-studio">Make chat stickers ↓</a></div>
 <figure id="generated-result" hidden><h3>Your child artwork.</h3><img id="generated-image" alt="Your child character made from the two parent Chogs"><figcaption id="artwork-caption"></figcaption><div class="character-actions"><a id="download-artwork" class="button" download="chogchemy.png">Download child ↓</a><a id="view-character" class="button secondary">Open family page ↗</a><button id="share-finished-character" class="secondary" type="button">Share child ↗</button></div></figure>
 <section id="family-comic-studio" class="family-comic-section" hidden>
 <span class="eyebrow">STEP 3 / THE FAMILY COMIC</span><h3>Create their first family story.</h3>
@@ -100,10 +100,18 @@
 <div id="episode-list" class="episode-list"></div>
 </section>
 </section>
+<section id="family-stickers-studio" class="family-comic-section sticker-studio" hidden>
+<span class="eyebrow">YOUR FAMILY / IN THE GROUP CHAT</span><h3>Make their sticker pack.</h3>
+<p>Six reactions starring your saved child and parents: GM, crying, celebrating, hugs, sleepy, and send help. One drawing request creates the whole pack.</p>
+<p id="sticker-budget" class="note" hidden></p><button id="generate-stickers" type="button" hidden>Create my sticker pack ✳</button><button id="cancel-stickers" class="secondary" type="button" hidden>Cancel sticker preparation</button>
+<p id="sticker-status" role="status"></p><p id="sticker-error" role="alert" hidden></p><p id="sticker-access" class="note"></p>
+<button id="connect-wallet-stickers" type="button" hidden>Connect creator wallet for stickers</button><p id="sticker-wallet-status" class="note" role="status" hidden></p>
+<div id="sticker-result" hidden><p id="sticker-caption" class="note"></p><div id="sticker-grid" class="sticker-grid"></div><div class="character-actions"><a id="download-sticker-pack" class="button" download="chogchemy-stickers.zip">Download all six · ZIP ↓</a><a id="view-stickers" class="button secondary">Open public sticker pack ↗</a></div><p class="note">These are transparent PNG images. To use them as stickers, add them through a supported sticker tool in your chat app. The ZIP bundles the files for download.</p></div>
+</section>
 </article>
 </section>
 <section id="descendants"><div class="section-title"><div><span class="eyebrow">MADE WITH CHOGCHEMY</span><h2>Explore creations.</h2></div></div><p>Child artwork appears first. A “Comic saved” badge means its family story is ready to view too.</p><div id="live-gallery"></div></section>
-<section id="about" class="simple-about"><span class="eyebrow">BEFORE YOU START</span><h2>A story you can keep.</h2><p>Chogchemy uses your Chog NFT to unlock the studio. The two parents inspire the child, and the child stars in the family comic. Both artworks are saved and shareable.</p><p class="note">AI artwork in our comic artist's style. Fictional character stories. Original NFTs stay in their wallets; no new NFT is minted.</p><a class="text-link" href="/demo">See how it works in the demo ↗</a><p><a class="text-link" href="/watch">Watch a real family walkthrough · 2:52 ↗</a></p></section>
+<section id="about" class="simple-about"><span class="eyebrow">BEFORE YOU START</span><h2>A story you can keep.</h2><p>Chogchemy uses your Chog NFT to unlock the studio. The two parents inspire the child, and the child stars in the family comic. Their comics and six-reaction sticker packs are saved and shareable.</p><p class="note">AI artwork in our comic artist's style. Fictional character stories. Original NFTs stay in their wallets; no new NFT is minted.</p><a class="text-link" href="/demo">See how it works in the demo ↗</a><p><a class="text-link" href="/watch">Watch a real family walkthrough · 2:52 ↗</a></p></section>
 </main>
 <footer><a class="brand footer-brand" href="/" aria-label="Chogchemy home"><img src="/brand/chogchemy-logo-v1.png" alt="Chogchemy" width="2172" height="724"></a><p>Team Chogchemy<br><span>Built by <a href="https://x.com/0xileri" target="_blank" rel="noopener noreferrer">@0xileri</a> · Artist reference and art direction by <a href="https://x.com/theejhay01" target="_blank" rel="noopener noreferrer">@theejhay01</a><br>AI-generated child artwork and comics · Built for Chogathon</span></p></footer>
 <script type="module" src="/wallet.js"></script><script type="module" src="/fusion.js"></script>

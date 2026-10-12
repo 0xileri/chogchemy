@@ -44,3 +44,7 @@ It does not mint, burn or transfer NFTs. The saved roots and signatures are data
 ## Continue a saved family
 
 After saving the first comic, the original creator can open the creation and scroll to **Create their next episode**. Choose adventure, school, or birthday, review the three chapter titles and allowance, then click **Create the next episode**. Each story is available once per family. The episode is saved below, downloadable, and linked on the public family page. Cancel is available during preparation; dispatched attempts are not automatically repeated. Earlier artworks stay saved and each new episode uses one request from the shared daily allowance.
+
+## Make a family sticker pack
+
+After saving a child, use **Make chat stickers** to reach its sticker section. Connect the original creator wallet if needed and click **Create my sticker pack**. One request prepares all six reactions. When saved, each transparent 512px PNG is individually downloadable; **Download all six** supplies a ZIP with a readme. The public family page has the same downloads. Add the PNGs using your chat app's supported sticker tool; the ZIP does not automatically install them. New requests are creator-only, ownership checked, and subject to the same daily allowance as children and comics. Generation and layout quality still need review with real outputs; synthetic fixtures test the interface and extraction only.

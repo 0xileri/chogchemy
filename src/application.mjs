@@ -61,6 +61,15 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         res.end(req.method === 'HEAD' ? undefined : data); return;
       }
       const artworkRoute = url.pathname.match(/^\/(artwork|comics)\/([a-f0-9]{64})\.png$/);
+      const stickerRoute = url.pathname.match(/^\/stickers\/([a-f0-9]{64})\/(gm|crying|celebrating|hugs|sleepy|send-help|pack)\.(png|zip)$/);
+      if (stickerRoute && ['GET', 'HEAD'].includes(req.method)) {
+        const [, id, name, extension] = stickerRoute;
+        if ((name === 'pack') !== (extension === 'zip')) { send(res, 404, { error: 'Sticker download not found.' }); return; }
+        const bytes = fusions.stickerAsset(id, name === 'pack' ? 'zip' : name);
+        if (!bytes) { send(res, 404, { error: 'Sticker download not found.' }); return; }
+        res.writeHead(200, { 'Content-Type': extension === 'zip' ? 'application/zip' : 'image/png', 'Content-Length': bytes.length, ...(extension === 'zip' ? { 'Content-Disposition': 'attachment; filename="chogchemy-stickers.zip"' } : {}), 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
+        res.end(req.method === 'HEAD' ? undefined : bytes); return;
+      }
       const episodeRoute = url.pathname.match(/^\/episodes\/([a-f0-9]{64})\/([a-f0-9]{64})\.png$/);
       if (episodeRoute && ['GET', 'HEAD'].includes(req.method)) {
         const bytes = fusions.episodeArtwork(episodeRoute[1], episodeRoute[2]);
@@ -133,7 +142,7 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         res.setHeader('Set-Cookie', cookie(id)); send(res, 200, { address: challenge.address }); return;
       }
       if (req.method === 'GET' && url.pathname === '/api/gallery') { send(res, 200, { artworks: fusions.gallery() }); return; }
-      const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate|comic|cancel-comic|episode|cancel-episode))?$/);
+      const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate|comic|cancel-comic|episode|cancel-episode|stickers|cancel-stickers))?$/);
       if (req.method === 'GET' && fusionRoute && !fusionRoute[2]) { send(res, 200, fusions.get(fusionRoute[1], session?.address)); return; }
       if (!session) { send(res, 401, { error: 'Connect and verify your wallet first.' }); return; }
       if (req.method === 'GET' && url.pathname === '/api/drawing-usage') { send(res, 200, fusions.usage(session.address)); return; }
@@ -162,6 +171,8 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         if (action === 'cancel-comic') { send(res, 200, await fusions.cancelComic(id, session.address)); return; }
         if (action === 'episode') { send(res, 202, await fusions.generateEpisode(id, session.address, await body(req))); return; }
         if (action === 'cancel-episode') { send(res, 200, await fusions.cancelEpisode(id, session.address, await body(req))); return; }
+        if (action === 'stickers') { send(res, 202, await fusions.generateStickers(id, session.address)); return; }
+        if (action === 'cancel-stickers') { send(res, 200, await fusions.cancelStickers(id, session.address)); return; }
       }
       if (req.method === 'GET' && url.pathname === '/api/chogs') {
         try {

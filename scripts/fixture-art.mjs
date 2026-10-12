@@ -1,5 +1,16 @@
 // Original procedural PNGs for the isolated browser fixture, not official Chog art.
 import { deflateSync } from 'node:zlib';
+import sharp from 'sharp';
+
+// Original geometric reactions for sticker pipeline/UI tests, not Chog or AI art.
+export async function fixtureStickerSheet() {
+  const colors = ['#d6f279', '#eab0c2', '#8fc6db', '#dea67b', '#b6a0d4', '#efc66f'];
+  const drawings = colors.map((color, i) => {
+    const x = i % 2 * 512 + 256, y = Math.floor(i / 2) * 1024 / 3 + 160;
+    return `<g><ellipse cx="${x}" cy="${y}" rx="120" ry="110" fill="${color}" stroke="#243125" stroke-width="9"/><circle cx="${x - 40}" cy="${y - 20}" r="25" fill="white" stroke="#243125" stroke-width="8"/><circle cx="${x + 40}" cy="${y - 20}" r="25" fill="white" stroke="#243125" stroke-width="8"/><path d="M${x - 25},${y + 40}Q${x},${y + 65} ${x + 25},${y + 40}" fill="none" stroke="#243125" stroke-width="9"/></g>`;
+  }).join('');
+  return sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect width="1024" height="1024" fill="white"/>${drawings}</svg>`)).png().toBuffer();
+}
 function chunk(type, data) {
   const name = Buffer.from(type), length = Buffer.alloc(4); length.writeUInt32BE(data.length);
   const payload = Buffer.concat([name, data]); let crc = 0xffffffff;

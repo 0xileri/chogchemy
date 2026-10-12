@@ -28,7 +28,7 @@ Chogchemy turns two Chog NFTs into an artist-guided AI child and a family comic,
 
 Chogchemy lets a Chog Genesis holder create a fictional family from two real Chog NFTs. Connect a holder wallet, choose two parents, create their child, then request a three-scene family comic: a wedding, a new arrival, and a family picnic. The comic uses the saved child as a reference so the story builds on the character already created.
 
-The studio uses an original fusion drawing from our collaborating comic artist, @theejhay01, to guide its outlines, color, texture and shading. AI generates the final child and comic. Both are saved, downloadable, and viewable on a public family page alongside the two parent NFT links and the recorded approval status.
+The studio uses an original fusion drawing from our collaborating comic artist, @theejhay01, to guide its outlines, color, texture and shading. AI generates the final child and comic. Both are saved, downloadable, and viewable on a public family page alongside the two parent NFT links and the recorded approval status. The family creator can also make a six-reaction sticker pack for chats: GM, crying, celebrating, hugs, sleepy and send help. A single image request creates the whole pack, exported as six transparent PNGs and a ZIP. A first comic is not required for stickers.
 
 The distinctive experience is the complete chain from owned Chogs to a child to a family story. The artist supplies a recognizable visual direction, while the NFTs supply the specific parents and the holder supplies the authority to create.
 

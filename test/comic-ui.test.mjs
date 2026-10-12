@@ -20,7 +20,7 @@ function browser(response) {
     setTimeout: () => 1, clearTimeout() {}, getWalletAddress: () => address,
     getChogPreview: async () => { throw new Error('Unused preview'); }, shareOrCopy: async () => 'copied',
     api: async path => {
-      if (path.endsWith('/comic') || path.endsWith('/episode')) {
+      if (path.endsWith('/comic') || path.endsWith('/episode') || path.endsWith('/stickers')) {
         requests++;
         if (response.status === 401) { address = null; walletEvents.get('chogchemy:wallet')(); }
         if (response.status) throw Object.assign(new Error(response.message), { status: response.status });
@@ -34,7 +34,7 @@ function browser(response) {
   };
   runInNewContext(source + '\nthis.show = render;', context);
   context.show(record);
-  return { get, record, show: context.show, click: () => get('generate-comic').handlers.get('click')(), clickEpisode: () => get('generate-episode').handlers.get('click')(), requests: () => requests };
+  return { get, record, show: context.show, click: () => get('generate-comic').handlers.get('click')(), clickEpisode: () => get('generate-episode').handlers.get('click')(), clickStickers: () => get('generate-stickers').handlers.get('click')(), requests: () => requests };
 }
 
 test('comic request errors appear beside the button and allow a later retry', async () => {
@@ -97,4 +97,23 @@ test('saved and failed episode choices are unavailable while the next unused sto
   assert.deepEqual(ui.get('episode-story').children.map(option => option.disabled), [true, true, false]);
   assert.equal(ui.get('episode-story').value, 'birthday'); assert.equal(ui.get('episode-list').children.length, 2);
   assert.equal(ui.get('generate-episode').disabled, false);
+});
+
+test('sticker clicks dispatch once and explain quota or expired-session errors beside the pack action', async () => {
+  for (const code of [429, 401]) {
+    const ui = browser({ status: code, message: code === 429 ? 'The daily artwork limit has been reached.' : 'Connect and verify your wallet.', record: { canGenerateStickers: true } });
+    assert.equal(ui.get('family-stickers-studio').hidden, false);
+    ui.clickStickers(); ui.clickStickers(); await flush();
+    assert.equal(ui.requests(), 1); assert.equal(ui.get('sticker-error').hidden, false);
+    assert.match(ui.get('sticker-error').textContent, code === 429 ? /drawing limit.*local time/ : /session expired.*sign in again/);
+    assert.equal(ui.get('generated-result').hidden, false);
+  }
+});
+
+test('saved sticker packs render six distinct PNG downloads and one ZIP without showing another paid action', async () => {
+  const ui = browser({ record: { stickers: { state: 'generated', artwork: { mode: 'fixture', zipUrl: '/stickers/test/pack.zip', items: ['gm','crying','celebrating','hugs','sleepy','send-help'].map(id => ({ id, name: id, url: `/stickers/test/${id}.png` })) } }, canGenerateStickers: false } });
+  await flush();
+  assert.equal(ui.get('sticker-result').hidden, false); assert.equal(ui.get('sticker-grid').children.length, 6);
+  assert.equal(ui.get('download-sticker-pack').href, '/stickers/test/pack.zip'); assert.equal(ui.get('generate-stickers').hidden, true);
+  assert.match(ui.get('sticker-caption').textContent, /TEST STICKERS/);
 });
