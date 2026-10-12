@@ -14,7 +14,11 @@ Website: https://chogchemy.up.railway.app
 
 Repository: https://github.com/0xileri/chogchemy (currently private; arrange judge access before submitting).
 
-Demo video: **[Add the uploaded, accessible video link before submitting]**
+Demo video: https://chogchemy.up.railway.app/watch
+
+Direct MP4: https://chogchemy.up.railway.app/demo-video.mp4
+
+The video is a narrated screenshot walkthrough of live pages and saved real results, with synthetic voice narration. Duration: about 2 minutes 48 seconds. It does not present image generation as instant.
 
 ## Project pitch, one line
 
@@ -81,7 +85,7 @@ Future work includes selectable story prompts, more family episodes, and opt-in 
 
 ## Before submitting
 
-1. Add Discord handles and the final uploaded video URL.
+1. Add Discord handles and check that the deployed video URL plays for judges.
 2. Make sure judges can access the private repository.
 3. Confirm the pre-existing-work disclosure with both team members.
 4. Sign in to the existing Chogathon application. The registration page checked on 11 October 2026 says registrations are closed, with sign-in available for existing applicants; verify final submission access in that account.

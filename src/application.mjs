@@ -8,6 +8,7 @@ import { createChogPreviews } from './chog-previews.mjs';
 import { renderCharacterPage, renderCharacterNotFound } from './character-page.mjs';
 
 const staticFiles = {
+  '/watch': ['watch.html', 'text/html'], '/demo-video.mp4': ['chogchemy-demo-v1.mp4', 'video/mp4'],
   '/demo': ['demo.html', 'text/html'], '/demo/': ['demo.html', 'text/html'],
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
@@ -71,6 +72,23 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         if (!file || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(404); res.end('Not found'); return; }
         let data = await readFile(new URL(`../public/${file[0]}`, import.meta.url));
         if (file[1] === 'text/html') data = Buffer.from(data.toString('utf8').replaceAll('__APP_ORIGIN__', appOrigin.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')));
+        if (file[1] === 'video/mp4') {
+          const headers = { 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' };
+          if (req.method === 'GET' && req.headers.range) {
+            const match = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
+            let start = NaN, end = data.length - 1;
+            if (match && (match[1] || match[2])) {
+              start = match[1] ? Number(match[1]) : Math.max(0, data.length - Number(match[2]));
+              if (match[1] && match[2]) end = Math.min(Number(match[2]), end);
+            }
+            if (!Number.isSafeInteger(start) || start < 0 || start >= data.length || end < start) {
+              res.writeHead(416, { ...headers, 'Content-Range': `bytes */${data.length}`, 'Content-Length': 0 }); res.end(); return;
+            }
+            res.writeHead(206, { ...headers, 'Content-Range': `bytes ${start}-${end}/${data.length}`, 'Content-Length': end - start + 1 });
+            res.end(data.subarray(start, end + 1)); return;
+          }
+          res.writeHead(200, { ...headers, 'Content-Length': data.length }); res.end(req.method === 'HEAD' ? undefined : data); return;
+        }
         res.writeHead(200, { 'Content-Type': file[1].startsWith('text/') ? `${file[1]}; charset=utf-8` : file[1], 'Content-Length': data.length, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         res.end(req.method === 'HEAD' ? undefined : data); return;
       }

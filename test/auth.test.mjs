@@ -16,9 +16,9 @@ function fixture(overrides = {}) {
     ...overrides,
   };
   const app = createApplication({ chain, origin: 'http://localhost:3000', now: () => time });
-  async function request(path, { method = 'GET', data, cookie, origin = 'http://localhost:3000', raw } = {}) {
+  async function request(path, { method = 'GET', data, cookie, origin = 'http://localhost:3000', raw, range } = {}) {
     const req = Readable.from(raw !== undefined ? [Buffer.from(raw)] : data === undefined ? [] : [Buffer.from(JSON.stringify(data))]);
-    req.url = path; req.method = method; req.headers = { ...(origin ? { origin } : {}), ...(cookie ? { cookie } : {}) }; req.socket = { remoteAddress: 'test' };
+    req.url = path; req.method = method; req.headers = { ...(origin ? { origin } : {}), ...(cookie ? { cookie } : {}), ...(range ? { range } : {}) }; req.socket = { remoteAddress: 'test' };
     const result = { headers: {}, status: 0, body: null };
     const res = {
       setHeader(key, value) { result.headers[key.toLowerCase()] = value; },
@@ -167,4 +167,26 @@ test('challenge requests are rate limited', async () => {
   for (let i = 0; i < 90; i++) assert.equal((await f.request('/api/config')).status, 200);
   assert.equal((await f.request('/api/auth/challenge', { method: 'POST', data: { address: owner.address } })).status, 429);
   f.advance(60001); assert.equal((await f.request('/api/config')).status, 200);
+});
+
+test('the public walkthrough serves MP4 bytes and supports seeking without wallet or RPC access', async () => {
+  const f = fixture();
+  const page = await f.request('/watch');
+  assert.equal(page.status, 200); assert.match(page.body, /src="\/demo-video.mp4"/); assert.doesNotMatch(page.body, /__APP_ORIGIN__/);
+  const full = await f.request('/demo-video.mp4');
+  assert.equal(full.status, 200); assert.equal(full.headers['content-type'], 'video/mp4');
+  assert.equal(full.bytes.subarray(4, 8).toString(), 'ftyp');
+  const size = full.bytes.length;
+  const head = await f.request('/demo-video.mp4', { method: 'HEAD', range: 'bytes=0-15' });
+  assert.equal(head.status, 200); assert.equal(head.bytes, undefined); assert.equal(head.headers['content-length'], size);
+  for (const [range, start, end] of [['bytes=0-15', 0, 15], ['bytes=-16', size - 16, size - 1], [`bytes=${size - 8}-`, size - 8, size - 1], [`bytes=${size - 8}-${size + 100}`, size - 8, size - 1]]) {
+    const part = await f.request('/demo-video.mp4', { range });
+    assert.equal(part.status, 206); assert.equal(part.headers['content-range'], `bytes ${start}-${end}/${size}`);
+    assert.equal(part.headers['content-length'], end - start + 1); assert.deepEqual(part.bytes, full.bytes.subarray(start, end + 1));
+  }
+  for (const range of [`bytes=${size}-`, 'bytes=8-2', 'bytes=-0', 'bytes=-', 'bytes=0-3,7-9', 'bytes=bad']) {
+    const response = await f.request('/demo-video.mp4', { range });
+    assert.equal(response.status, 416); assert.equal(response.headers['content-range'], `bytes */${size}`);
+  }
+  assert.equal(f.calls(), 0);
 });
