@@ -44,7 +44,7 @@ Say: “@theejhay01 created the original hand-drawn reference and art direction.
 
 Return to the comic with the live website URL visible.
 
-Say: “Next we’ll test with more holders and explore new story choices and future episodes. That’s Chogchemy: two Chogs, one child, and a family story you can keep.”
+Say: “Saved families can now choose adventure, school, or birthday for their next episode. Next we’ll test with more holders. That’s Chogchemy: two Chogs, one child, and a family story you can keep.”
 
 ## Recording notes
 
@@ -54,3 +54,5 @@ Say: “Next we’ll test with more holders and explore new story choices and fu
 - Do not expose credentials, private keys or wallet recovery phrases.
 - Upload the final video somewhere judges can view it; paste its URL into SUBMISSION.md.
 - This script is a draft. Check pronunciation and the actual video duration before submitting.
+
+The published narrated screenshot walkthrough at /watch now lasts about 2:52 and includes the new episode choices in its closing scene.

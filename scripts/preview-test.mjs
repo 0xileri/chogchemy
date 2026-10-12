@@ -17,6 +17,7 @@ const chain = {
 };
 const fixturePng = fixtureArt(true);
 const app = createApplication({ chain, origin, generationOptions: {
+  holderDailyLimit: 4,
   loadReference: async (_, tokenId) => ({ tokenId, bytes: fixturePng, mime: 'image/png', name: 'Synthetic parent', traits: [] }),
   imageGenerator: { configured: true, mode: 'fixture', model: 'synthetic-test', async generate({ kind }) { return { bytes: kind === 'comic' ? fixtureComic() : fixturePng, mode: 'fixture', model: 'synthetic-test' }; } },
 } });

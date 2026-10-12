@@ -18,7 +18,7 @@ Demo video: https://chogchemy.up.railway.app/watch
 
 Direct MP4: https://chogchemy.up.railway.app/demo-video.mp4
 
-The video is a narrated screenshot walkthrough of live pages and saved real results, with synthetic voice narration. Duration: about 2 minutes 48 seconds. It does not present image generation as instant.
+The video is a narrated screenshot walkthrough of live pages and saved real results, with synthetic voice narration. Duration: about 2 minutes 52 seconds. It does not present image generation as instant.
 
 ## Project pitch, one line
 
@@ -81,7 +81,9 @@ The public gallery currently includes a saved child and completed family comic f
 
 Next we will test with more Chog holders, review the generated families with our comic artist, and collect feedback on whether the child clearly inherits traits from both parents and remains recognizable in the comic.
 
-Future work includes selectable story prompts, more family episodes, and opt-in collaborations between holders. These are roadmap items; the working build currently supports one fixed first episode per child. We will use feedback to test repeat use before expanding the story system.
+Saved families can now create three more episodes: a first adventure, a first school day, and a birthday surprise. Each story is available once per family, keeps the same parent NFTs and saved child, and uses one additional drawing request. The earlier artwork remains saved. Ownership and quotas are checked again before dispatch. Independent retention data is still to be gathered.
+
+Future work includes more story choices and opt-in collaborations between holders. We will use feedback to test repeat use before expanding the story system.
 
 ## Before submitting
 

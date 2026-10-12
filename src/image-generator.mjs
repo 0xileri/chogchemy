@@ -12,14 +12,16 @@ export function fusionPrompt(parents, direction) {
     JSON.stringify(parents.map(({ tokenId, name, traits }) => ({ tokenId, name, traits }))),
   ].join('\n');
 }
-export function familyComicPrompt(parents, direction) {
+export function familyComicPrompt(parents, direction, story = null) {
   return [
     'Create one square comic page with exactly THREE equal horizontal panels stacked vertically, read from top to bottom. Use clear dark panel borders.',
     'Image 1 is parent Chog A. Image 2 is parent Chog B. Image 3 is their already-created child. Images 4 onward are artist STYLE references only.',
     'Keep the three characters recognizable and consistent in every panel. Preserve the exact saved child design from image 3; do not invent a replacement child or borrow a character from the artist reference.',
-    'Panel 1 — The wedding: the TWO adult parent Chogs celebrate getting married under a flower arch. Their child has not arrived yet.',
-    'Panel 2 — The new arrival: the SAME two parents happily welcome the child from image 3, drawn smaller, into their family.',
-    'Panel 3 — Family life: BOTH parents and that SAME child enjoy a playful picnic, with the child stealing a snack and everyone laughing.',
+    ...(story ? story.scenes.map((scene, i) => `Panel ${i + 1} — ${scene}`) : [
+      'Panel 1 — The wedding: the TWO adult parent Chogs celebrate getting married under a flower arch. Their child has not arrived yet.',
+      'Panel 2 — The new arrival: the SAME two parents happily welcome the child from image 3, drawn smaller, into their family.',
+      'Panel 3 — Family life: BOTH parents and that SAME child enjoy a playful picnic, with the child stealing a snack and everyone laughing.',
+    ]),
     'This is a wholesome fictional story about NFT characters. Do not depict real wallet holders or make claims about their relationships.',
     `Follow the rendering style of the supplied artist drawing (${direction.label || 'comic style'}): expressive thick black outlines, vivid colors, simple shading and soft textured surfaces.`,
     'Keep each scene legible with distinct characters and uncluttered backgrounds. Make a coherent comic composition, not three portraits or a collage of the reference images.',
@@ -28,7 +30,7 @@ export function familyComicPrompt(parents, direction) {
     JSON.stringify(parents.map(({ tokenId, name, traits }) => ({ tokenId, name, traits }))),
   ].join('\n');
 }
-function generationPrompt(input) { return input.kind === 'comic' ? familyComicPrompt(input.parents, input.artDirection) : fusionPrompt(input.parents, input.artDirection); }
+function generationPrompt(input) { return input.kind === 'comic' ? familyComicPrompt(input.parents, input.artDirection, input.story) : fusionPrompt(input.parents, input.artDirection); }
 export function createImageGenerator({ provider = process.env.IMAGE_PROVIDER || 'openai', ...options } = {}) {
   if (provider === 'orbio') return createOrbioImageGenerator(options);
   if (provider === 'openai') return createOpenAiImageGenerator(options);

@@ -4,16 +4,22 @@ import { shareOrCopy } from './share.js';
 const $ = id => document.getElementById(id);
 let current = null, message = null, operation = 0, busy = false, poll = null, comicAction = null;
 let drawingUsage = null, usagePending = null, choosingNew = false;
+let episodeCancelButtons = [];
 const status = text => { $('fusion-status').textContent = text; };
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const active = request => ['awaiting_approvals', 'approved'].includes(request.state) && request.expires > Date.now();
 const optionalPartner = request => request.approvalPolicy === 'creator';
-const creationState = request => request.comic?.artwork ? 'Child + comic saved' : request.artwork ? ['preparing', 'generating'].includes(request.comic?.state) ? 'Child saved · Comic drawing' : request.comic?.state === 'failed' ? 'Child saved · Comic failed' : 'Child saved · Comic not created' : ({ approved: 'Ready to create the child', awaiting_approvals: 'Waiting for approval', preparing: 'Preparing the child', generating: 'Drawing the child', generation_failed: 'Child drawing failed', cancelled: 'Cancelled', expired: 'Expired', invalidated: 'Parent ownership changed' })[request.state] || 'Work in progress';
+const creationState = request => {
+  if ((request.episodes || []).some(e => ['preparing', 'generating'].includes(e.state))) return 'Family saved · New episode drawing';
+  const count = (request.episodes || []).filter(e => e.artwork).length;
+  if (count) return `Family saved · ${count} extra episode${count === 1 ? '' : 's'}`;
+  return request.comic?.artwork ? 'Child + comic saved' : request.artwork ? ['preparing', 'generating'].includes(request.comic?.state) ? 'Child saved · Comic drawing' : request.comic?.state === 'failed' ? 'Child saved · Comic failed' : 'Child saved · Comic not created' : ({ approved: 'Ready to create the child', awaiting_approvals: 'Waiting for approval', preparing: 'Preparing the child', generating: 'Drawing the child', generation_failed: 'Child drawing failed', cancelled: 'Cancelled', expired: 'Expired', invalidated: 'Parent ownership changed' })[request.state] || 'Work in progress';
+};
 const resetTime = () => new Date(drawingUsage?.resetsAt || (Math.floor(Date.now() / 86400000) + 1) * 86400000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 function budgetText() {
   if (!drawingUsage) return '';
   if (!drawingUsage.remaining || !drawingUsage.globalRemaining) return `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.`;
-  return `${drawingUsage.remaining} of ${drawingUsage.limit} drawing requests left today. Creating a child uses one; creating its comic uses another.`;
+  return `${drawingUsage.remaining} of ${drawingUsage.limit} drawing requests left today. Each child, comic, or new episode uses one request.`;
 }
 async function refreshUsage() {
   const address = getWalletAddress(); if (!address) return;
@@ -69,7 +75,7 @@ function controls() {
   $('start-new-family').disabled = busy;
   $('drawing-usage').hidden = !address;
   $('drawing-remaining').textContent = drawingUsage ? `${drawingUsage.remaining} drawing request${drawingUsage.remaining === 1 ? '' : 's'} left today` : 'Checking your drawing allowance…';
-  $('drawing-usage-note').textContent = drawingUsage ? `${drawingUsage.used} of ${drawingUsage.limit} used. One request per child or comic. Resets ${resetTime()} (your local time).${!drawingUsage.globalRemaining ? ' The studio-wide daily limit is also used up.' : ''}` : 'Your allowance appears here after wallet verification.';
+  $('drawing-usage-note').textContent = drawingUsage ? `${drawingUsage.used} of ${drawingUsage.limit} used. One request per child, comic, or episode. Resets ${resetTime()} (your local time).${!drawingUsage.globalRemaining ? ' The studio-wide daily limit is also used up.' : ''}` : 'Your allowance appears here after wallet verification.';
   for (const id of ['child-budget', 'comic-budget']) { $(id).hidden = !address || !drawingUsage; $(id).textContent = budgetText(); }
   $('child-budget').hidden ||= current?.state !== 'approved';
   $('comic-budget').hidden ||= !current?.canGenerateComic;
@@ -93,10 +99,11 @@ function controls() {
   $('generate-comic').textContent = comicAction === 'generate' ? 'Checking your family…' : current?.comic?.state === 'ready' ? 'Try drawing the comic again ✳' : 'Create the family comic ✳';
   $('cancel-comic').hidden = current?.comic?.state !== 'preparing' || address !== current?.createdBy;
   $('cancel-comic').disabled = busy;
+  episodeControls();
   if (current?.state === 'preparing' && role >= 0) $('cancel-invitation').hidden = false;
 }
 function render(request) {
-  if (current?.id !== request.id) comicError('');
+  if (current?.id !== request.id) { comicError(''); episodeError(''); }
   current = request; resetMessage(); $('invitation-card').hidden = false;
   $('invitation-link').value = request.invitationUrl;
   $('invitation-state').textContent = creationState(request);
@@ -140,7 +147,7 @@ function render(request) {
   }
   renderComic(request);
   clearTimeout(poll);
-  if (['preparing', 'generating'].includes(request.state) || ['preparing', 'generating'].includes(request.comic?.state)) poll = setTimeout(() => { if (!document.hidden && !busy && current?.id === request.id) void load(request.id); else if (current?.id === request.id) render(current); }, 5000);
+  if (['preparing', 'generating'].includes(request.state) || ['preparing', 'generating'].includes(request.comic?.state) || (request.episodes || []).some(e => ['preparing', 'generating'].includes(e.state))) poll = setTimeout(() => { if (!document.hidden && !busy && current?.id === request.id) void load(request.id); else if (current?.id === request.id) render(current); }, 5000);
   const address = getWalletAddress();
   $('invitation-role').textContent = !address ? 'Connect the wallet holding either parent to review and sign.' : request.parents.some(p => p.owner === address) ? 'This wallet is one of the two invited holders.' : 'This wallet is not one of the invited holders. Switch to the wallet holding a listed parent.';
   controls();
@@ -164,7 +171,79 @@ function renderComic(request) {
     $('view-family').href = request.characterUrl + '#family-comic';
     $('comic-caption').textContent = `${comic.artwork.mode === 'fixture' ? 'TEST COMIC · Synthetic output' : 'AI family comic'} · Chogs #${request.parents.map(p => p.tokenId).join(' + #')} and their saved fusion child. Artwork only; no new NFT minted.`;
   }
+  renderEpisodes(request);
 }
+function episodeError(text) { $('episode-error').textContent = text; $('episode-error').hidden = !text; }
+function episodeControls() {
+  const address = getWalletAddress(), episodes = current?.episodes || [];
+  const available = (current?.episodeChoices || []).some(choice => !episodes.some(e => e.storyId === choice.id && !['ready', 'cancelled'].includes(e.state)));
+  const progress = episodes.some(e => ['preparing', 'generating'].includes(e.state));
+  const atLimit = !!drawingUsage && (!drawingUsage.remaining || !drawingUsage.globalRemaining);
+  $('episode-creator').hidden = !current?.canGenerateEpisode || !address;
+  $('generate-episode').hidden = !available;
+  $('generate-episode').disabled = busy || atLimit || progress || !current?.canGenerateEpisode || !$('episode-story').value;
+  $('generate-episode').textContent = comicAction === 'episode' ? 'Checking your family…' : 'Create the next episode ✳';
+  $('episode-story').disabled = busy || progress || !available;
+  for (const button of episodeCancelButtons) button.disabled = busy;
+  $('episode-budget').textContent = budgetText() || 'Each new episode uses one drawing request.';
+  const allSaved = (current?.episodeChoices || []).length > 0 && current.episodeChoices.every(choice => episodes.some(e => e.storyId === choice.id && e.artwork));
+  $('episode-access').textContent = !available && current?.comic?.artwork ? allSaved ? 'All three extra stories are saved. Open or download them below.' : 'All three stories have been attempted. Your saved episodes remain below; dispatched failures cannot be repeated.' : progress ? 'An episode is underway. This page updates automatically; earlier artwork stays saved.' : address !== current?.createdBy ? 'Connect the wallet that created this family to draw its next episode.' : 'Earlier child artwork and comics stay saved. New episodes check both parent owners again.';
+}
+function episodeChapters() {
+  const choice = (current?.episodeChoices || []).find(s => s.id === $('episode-story').value);
+  $('episode-chapters').textContent = choice ? choice.chapters.join(' → ') : '';
+}
+function renderEpisodes(request) {
+  $('family-episodes-studio').hidden = !request.comic?.artwork;
+  const selected = $('episode-story').value, episodes = request.episodes || [];
+  $('episode-story').replaceChildren();
+  const available = [];
+  for (const choice of request.episodeChoices || []) {
+    const previous = episodes.find(e => e.storyId === choice.id), option = document.createElement('option');
+    option.value = choice.id; option.disabled = !!previous && !['ready', 'cancelled'].includes(previous.state);
+    option.textContent = choice.title + (previous ? ` · ${previous.state === 'generated' ? 'Saved' : previous.state === 'failed' ? 'Attempt failed' : previous.state === 'ready' || previous.state === 'cancelled' ? 'Ready to try' : 'Drawing'}` : '');
+    if (!option.disabled) available.push(choice.id);
+    $('episode-story').append(option);
+  }
+  $('episode-story').value = available.includes(selected) ? selected : available[0] || '';
+  episodeChapters();
+  $('episode-list').replaceChildren();
+  episodeCancelButtons = [];
+  for (const item of episodes) {
+    const card = document.createElement('article'); card.className = 'episode-card';
+    const title = document.createElement('h4'); title.textContent = `Episode ${item.number} · ${item.title}`;
+    const note = document.createElement('p'); note.className = 'note'; note.textContent = item.error || ({ preparing: 'Preparing this episode. You can still cancel.', generating: 'Drawing this episode. It will appear here when saved.', generated: 'Episode saved.', ready: 'Ready to try again before drawing starts.', cancelled: 'Preparation cancelled. No drawing request was dispatched.' })[item.state] || 'No episode saved.';
+    card.append(title, note);
+    if (item.artwork) {
+      const image = document.createElement('img'); image.src = item.artwork.url; image.alt = `${item.title}, starring the two Chog parents and their saved child`; image.loading = 'lazy';
+      const caption = document.createElement('p'); caption.className = 'note'; caption.textContent = item.artwork.mode === 'fixture' ? 'TEST EPISODE · Synthetic output, not AI artwork.' : 'AI family episode · Artwork only; no new NFT minted.';
+      const actions = document.createElement('div'); actions.className = 'character-actions';
+      const download = document.createElement('a'); download.className = 'button'; download.href = item.artwork.url; download.download = `chogchemy-episode-${item.number}.png`; download.textContent = 'Download episode ↓';
+      const open = document.createElement('a'); open.className = 'button secondary'; open.href = request.characterUrl + '#episode-' + item.id; open.textContent = 'Open public episode ↗';
+      actions.append(download, open); card.append(image, caption, actions);
+    }
+    if (item.state === 'preparing' && getWalletAddress() === request.createdBy) {
+      const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'secondary'; cancel.textContent = 'Cancel episode preparation'; cancel.disabled = busy;
+      episodeCancelButtons.push(cancel);
+      cancel.addEventListener('click', () => void perform(async () => {
+        const id = current?.id, attempt = operation; if (id !== request.id) return;
+        const updated = await api(`/api/fusions/${id}/cancel-episode`, { episodeId: item.id });
+        if (attempt !== operation || current?.id !== id) return;
+        render(updated); status('Episode preparation cancelled. Your saved family is safe.');
+      }, 'episode'));
+      card.append(cancel);
+    }
+    $('episode-list').append(card);
+  }
+}
+$('episode-story').addEventListener('change', () => { episodeError(''); episodeChapters(); episodeControls(); });
+$('generate-episode').addEventListener('click', () => void perform(async () => {
+  const id = current?.id, attempt = operation, story = $('episode-story').value; if (!id || !story) return;
+  episodeError(''); status('Checking your family before preparing the next episode…');
+  const request = await api(`/api/fusions/${id}/episode`, { story });
+  if (attempt !== operation || current?.id !== id) return;
+  render(request); status('Your next episode is underway. The earlier artwork is still saved.');
+}, 'episode'));
 $('generate-comic').addEventListener('click', () => void perform(async () => {
   const id = current?.id, attempt = operation; if (!id) return;
   status('Checking the family before preparing your comic…');
@@ -207,7 +286,7 @@ async function listMine() {
       link.href = request.invitationUrl;
       const title = document.createElement('strong'); title.textContent = `Chogs #${request.parents[0].tokenId} + #${request.parents[1].tokenId}`;
       const state = document.createElement('span'); state.textContent = creationState(request);
-      const action = document.createElement('span'); action.className = 'saved-action'; action.textContent = request.comic?.artwork ? 'Open child & comic ↗' : request.comic?.state === 'failed' ? 'Open child / View comic error ↗' : request.artwork ? 'Open child / Create comic ↗' : 'Continue creation ↗';
+      const action = document.createElement('span'); action.className = 'saved-action'; action.textContent = request.episodes?.length ? 'Open family & episodes ↗' : request.comic?.artwork ? 'Open child & comic ↗' : request.comic?.state === 'failed' ? 'Open child / View comic error ↗' : request.artwork ? 'Open child / Create comic ↗' : 'Continue creation ↗';
       link.append(title, state, action);
       link.addEventListener('click', event => { event.preventDefault(); if (busy) return; choosingNew = false; void load(request.id, true).then(() => (current?.artwork ? $('child-next') : $('invitation-card')).scrollIntoView({ behavior: 'smooth' })); });
       $('invitation-list').append(link);
@@ -220,14 +299,14 @@ async function perform(work, familyAction = null) {
   if (busy) return;
   const comicId = familyAction ? current?.id : null;
   comicAction = familyAction;
-  if (familyAction) comicError('');
+  if (familyAction) { comicError(''); episodeError(''); }
   busy = true; controls();
   const attempt = operation;
   try { await work(); }
   catch (error) {
     const errorText = error.status === 401 ? 'Your wallet session expired. Connect and sign in again, then create your family comic.' : /daily artwork limit/i.test(error.message) ? `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.` : error.message;
     // A 401 clears the wallet and advances operation; still explain it beside this comic.
-    if (familyAction && current?.id === comicId && (attempt === operation || (error.status === 401 && !getWalletAddress()))) comicError(errorText);
+    if (familyAction && current?.id === comicId && (attempt === operation || (error.status === 401 && !getWalletAddress()))) { if (familyAction === 'episode') episodeError(errorText); else comicError(errorText); }
     if (attempt === operation) {
       if (error.status === 409 && current) await load(current.id);
       status(error.code === 4001 ? 'Approval cancelled in your wallet. Nothing was signed or saved.' : errorText);
@@ -252,7 +331,7 @@ $('new-fusion').addEventListener('submit', event => {
 });
 $('start-new-family').addEventListener('click', () => {
   if (busy || !getWalletAddress()) return;
-  choosingNew = true; operation++; current = null; resetMessage(); comicError(''); clearTimeout(poll);
+  choosingNew = true; operation++; current = null; resetMessage(); comicError(''); episodeError(''); clearTimeout(poll);
   $('invitation-card').hidden = true;
   $('fusion-parent-b').value = ''; previewParent('b', true);
   const url = new URL(location.href); url.searchParams.delete('fusion'); url.hash = 'fusion'; history.replaceState(null, '', url);
@@ -351,4 +430,7 @@ window.addEventListener('chogchemy:wallet', () => {
 });
 controls();
 const initialId = new URL(location.href).searchParams.get('fusion');
-if (initialId) { void load(initialId); $('fusion').scrollIntoView({ behavior: 'smooth' }); }
+if (initialId) void load(initialId).then(() => {
+  const target = location.hash === '#family-episodes-studio' && !$('family-episodes-studio').hidden ? $('family-episodes-studio') : $('fusion');
+  target.scrollIntoView({ behavior: 'smooth' });
+});

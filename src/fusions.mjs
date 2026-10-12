@@ -4,6 +4,7 @@ import { collection } from './chain.mjs';
 import { loadArtDirection, digest, imageMime } from './art-direction.mjs';
 import { loadParentReference } from './reference-assets.mjs';
 import { createFamilyComicService } from './family-comics.mjs';
+import { createFamilyEpisodeService, episodeStories } from './family-episodes.mjs';
 
 export class FusionError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -39,6 +40,10 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     if (record.state === 'generating') { record.state = 'generation_failed'; record.generation.error = 'Generation was interrupted. The provider may have charged this attempt; it will not be retried.'; store.put(record); }
     if (record.comic?.state === 'preparing') { record.comic.state = 'ready'; record.comic.error = 'Comic preparation was interrupted. You can try again.'; store.put(record); }
     if (record.comic?.state === 'generating') { record.comic.state = 'failed'; record.comic.error = 'Comic generation was interrupted and may have been charged. It will not be retried.'; store.put(record); }
+    for (const episode of record.episodes || []) {
+      if (episode.state === 'preparing') { episode.state = 'ready'; episode.error = 'Episode preparation was interrupted. You can try again.'; store.put(record); }
+      if (episode.state === 'generating') { episode.state = 'failed'; episode.error = 'Episode generation was interrupted and may have been charged. It will not be retried.'; store.put(record); }
+    }
   }
   // Serialize mutations in this server process, including checks that await the RPC.
   let queue = Promise.resolve();
@@ -89,12 +94,15 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       canGenerate: Boolean(address && (optionalPartner(record) ? address === record.createdBy : record.parents.some(p => p.owner === address))),
       comic: record.comic ? { state: record.comic.state, title: record.comic.title, error: record.comic.error || null, requestedAt: record.comic.requestedAt, checkedAt: record.comic.checkedAt, checkedBlock: record.comic.checkedBlock, styleLabel: record.comic.styleLabel, styleHash: record.comic.styleHash, childDigest: record.comic.childDigest, artwork: record.comic.artwork ? { ...record.comic.artwork, url: `/comics/${record.id}.png` } : null } : null,
       canGenerateComic: Boolean(address === record.createdBy && record.state === 'generated' && imageGenerator?.configured && (!record.comic || ['ready', 'cancelled'].includes(record.comic.state))),
+      episodeChoices: episodeStories.map(({ id, title, chapters }) => ({ id, title, chapters })),
+      episodes: (record.episodes || []).map(e => ({ id: e.id, number: e.number, storyId: e.storyId, title: e.title, chapters: e.chapters, state: e.state, error: e.error || null, requestedAt: e.requestedAt, checkedAt: e.checkedAt, checkedBlock: e.checkedBlock, styleLabel: e.styleLabel, styleHash: e.styleHash, childDigest: e.childDigest, artwork: e.artwork ? { ...e.artwork, url: `/episodes/${record.id}/${e.id}.png` } : null })),
+      canGenerateEpisode: Boolean(address === record.createdBy && record.state === 'generated' && record.comic?.state === 'generated' && imageGenerator?.configured),
     };
   }
   function quotaUsage() {
     const records = store.all().filter(r => r.origin === origin);
     const day = Math.floor(now() / 86400000) * 86400000;
-    const attempts = records.flatMap(r => [...(r.generation?.providerStartedAt >= day ? [{ holders: quotaHolders(r) }] : []), ...(r.comic?.providerStartedAt >= day ? [{ holders: [r.createdBy] }] : [])]);
+    const attempts = records.flatMap(r => [...(r.generation?.providerStartedAt >= day ? [{ holders: quotaHolders(r) }] : []), ...(r.comic?.providerStartedAt >= day ? [{ holders: [r.createdBy] }] : []), ...(r.episodes || []).filter(e => e.providerStartedAt >= day).map(() => ({ holders: [r.createdBy] }))]);
     return { records, day, attempts };
   }
   function usage(address) {
@@ -104,7 +112,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
   }
   function checkQuota(record, checkConcurrency = true, kind = 'fusion') {
     const { records, attempts } = quotaUsage();
-    const occupied = records.reduce((count, r) => count + Number(['preparing', 'generating'].includes(r.state)) + Number(['preparing', 'generating'].includes(r.comic?.state)), 0);
+    const occupied = records.reduce((count, r) => count + Number(['preparing', 'generating'].includes(r.state)) + Number(['preparing', 'generating'].includes(r.comic?.state)) + (r.episodes || []).filter(e => ['preparing', 'generating'].includes(e.state)).length, 0);
     if (checkConcurrency && occupied >= concurrency) fail(429, 'The studio is busy. Try again after another artwork finishes.');
     const holders = kind === 'comic' ? [record.createdBy] : quotaHolders(record);
     if (attempts.length >= dailyLimit || holders.some(holder => attempts.filter(a => a.holders.includes(holder)).length >= holderDailyLimit)) fail(429, 'The daily artwork limit has been reached. Try again after 00:00 UTC.');
@@ -153,11 +161,15 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     }
   }
   const comics = createFamilyComicService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
+  const episodes = createFamilyEpisodeService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   return {
     usage,
     generateComic: comics.generate,
     cancelComic: comics.cancel,
     comicArtwork: comics.artwork,
+    generateEpisode: episodes.generate,
+    cancelEpisode: episodes.cancel,
+    episodeArtwork: episodes.artwork,
     idle() { return Promise.all([...jobs]); },
     gallery() { return store.all().filter(r => r.origin === origin && r.state === 'generated').sort((a, b) => b.artwork.createdAt - a.artwork.createdAt).slice(0, 24).map(r => view(r)); },
     artwork(id) { const record = getRecord(id); if (record.state !== 'generated') fail(404, 'Artwork not found.'); return store.artwork(id); },

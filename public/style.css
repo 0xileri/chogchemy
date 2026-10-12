@@ -45,3 +45,11 @@ footer{align-items:center;gap:24px}.footer-brand{width:190px;height:42px}footer 
 #child-budget,#comic-budget{padding:14px 16px;background:var(--cream);border:1px solid var(--line);border-radius:10px;color:var(--ink);line-height:1.7}#comic-error{padding:16px;border:1px solid var(--pink);border-radius:10px;background:#fff0f4;color:#742841;line-height:1.7}.simple-about p{max-width:710px;line-height:1.8}#family-comic-studio{scroll-margin-top:24px}#my-creations,#holder,#fusion{scroll-margin-top:20px}
 @media(max-width:760px){.studio-steps{padding:20px;grid-template-columns:1fr;gap:10px}.studio-steps a{padding:16px}.saved-list{grid-template-columns:1fr}.next-step{flex-direction:column;align-items:stretch;padding:20px}.next-step .button{text-align:center}.header-links{gap:16px}}
 @media(max-width:600px){.header-links{grid-column:1;grid-row:2;gap:16px;font-size:12px}.header-links .family-nav{font-size:12px}#connect-wallet{grid-column:2}.next-step h3{font-size:21px}}
+/* Saved family episodes share the existing comic layout. */
+.episode-studio { margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #d9dfce; }
+.episode-studio select { width: 100%; max-width: 36rem; padding: 1rem; border: 1px solid #aeb7a2; border-radius: 12px; background: #fff; color: #243125; font: inherit; }
+.episode-studio label { display: block; margin-bottom: .75rem; }
+.episode-list { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+.episode-card { padding: 1.5rem; background: #f7f6ed; border: 1px solid #d9dfce; border-radius: 18px; }
+.episode-card h4 { font-size: 1.3rem; margin: 0 0 1rem; }
+.episode-card img { display: block; max-width: 100%; width: 760px; height: auto; border-radius: 14px; margin-top: 1rem; }

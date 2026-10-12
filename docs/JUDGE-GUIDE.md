@@ -39,4 +39,8 @@ Record the review honestly. If a result is weak, preserve it as a test example a
 
 ## What this build does not claim
 
-It does not mint, burn or transfer NFTs. The saved roots and signatures are database records. It has no token spending integration, no public user retention study yet, and no multiple-episode generator. Smart-contract wallet sign-in is not supported yet.
+It does not mint, burn or transfer NFTs. The saved roots and signatures are database records. It has no token spending integration, no public user retention study yet, and no unlimited-episode generator. Smart-contract wallet sign-in is not supported yet.
+
+## Continue a saved family
+
+After saving the first comic, the original creator can open the creation and scroll to **Create their next episode**. Choose adventure, school, or birthday, review the three chapter titles and allowance, then click **Create the next episode**. Each story is available once per family. The episode is saved below, downloadable, and linked on the public family page. Cancel is available during preparation; dispatched attempts are not automatically repeated. Earlier artworks stay saved and each new episode uses one request from the shared daily allowance.
