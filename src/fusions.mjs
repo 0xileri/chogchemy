@@ -21,6 +21,7 @@ export function approvalMessage(record, owner) {
     '', `App: ${record.origin}`, `Request ID: ${record.id}`, `Chain ID: ${record.chainId}`, `Collection: ${record.collection}`,
     ...record.parents.map((parent, index) => `Parent ${index === 0 ? 'A' : 'B'}: token ${parent.tokenId} · holder ${parent.owner}`),
     `Approving holder: ${owner}`, `Art direction: ${record.artDirection}`,
+    ...(record.facing ? [`Child facing: ${record.facing} (left/right refer to the viewer's screen)`] : []),
     ...(optionalPartner(record) ? ['Approval policy: Partner approval optional; only the verified creator can start generation.'] : []),
     ...(record.artDirectionHash ? [`Style SHA-256: ${record.artDirectionHash}`] : []),
     ...(record.artDirectionSnapshot ? ['Style rules:', ...record.artDirectionSnapshot.rules.map(rule => `• ${rule}`), `Artist reference images: ${record.artDirectionSnapshot.references.length}`] : []),
@@ -85,6 +86,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       id: record.id, state: record.state, parents: record.parents.map(p => ({ tokenId: p.tokenId, owner: p.owner, approvedAt: p.approval?.at || null })),
       createdAt: record.createdAt, expires: record.expires, checkedAt: record.checkedAt, checkedBlock: record.checkedBlock,
       artDirection: record.artDirection, collection: { address: record.collection, chainId: record.chainId },
+      facing: record.facing || 'auto',
       invitationUrl: `${record.origin}/?fusion=${record.id}#fusion`,
       characterUrl: record.state === 'generated' && record.artwork ? `${record.origin}/characters/${record.id}` : null,
       yourRole: address ? record.parents.findIndex(p => p.owner === address) : -1,
@@ -127,7 +129,8 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     try {
       const initial = getRecord(id);
       const parents = await Promise.all(initial.parents.map(p => loadReference(chain, p.tokenId)));
-      imageGenerator.validateInput?.({ parents, artDirection });
+      const input = { parents, artDirection, facing: initial.facing || 'auto' };
+      imageGenerator.validateInput?.(input);
       const dispatch = await serial(async () => {
         const record = getRecord(id);
         if (record.state !== 'preparing') return false;
@@ -146,7 +149,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       });
       if (!dispatch) return;
       dispatched = true;
-      const result = await imageGenerator.generate({ parents, artDirection });
+      const result = await imageGenerator.generate(input);
       if (!result.bytes?.length || result.bytes.length > 25 * 1024 * 1024 || imageMime(result.bytes) !== 'image/png') throw new Error('Invalid image output');
       await serial(() => {
         const record = getRecord(id);
@@ -203,6 +206,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       if (!input || !tokenIdValid(input.parentA) || !tokenIdValid(input.parentB)) fail(400, 'Enter both numeric token IDs from the OpenSea URLs.');
       if (input.parentA === input.parentB) fail(400, 'Choose two different Chogs.');
       if (input.requirePartnerApproval !== undefined && typeof input.requirePartnerApproval !== 'boolean') fail(400, 'Choose whether partner approval is required.');
+      if (input.facing !== undefined && !['auto', 'left', 'right'].includes(input.facing)) fail(400, 'Choose automatic, left, or right for the child facing.');
       const requirePartnerApproval = input.requirePartnerApproval !== false;
       if (store.activeCount(address, now()) >= 20 || store.activeCount(null, now()) >= 1000) fail(429, 'Too many active invitations. Cancel an existing invitation before creating another.');
       const snapshot = await owners([input.parentA, input.parentB]);
@@ -213,6 +217,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       const record = {
         id: randomBytes(32).toString('hex'), state: requirePartnerApproval ? 'awaiting_approvals' : 'approved', createdBy: address, origin,
         approvalPolicy: requirePartnerApproval ? 'both_holders' : 'creator', creatorVerifiedAt: requirePartnerApproval ? null : createdAt,
+        facing: input.facing || 'auto',
         chainId: collection.chainId, collection: collection.address, artDirection: artDirection.label,
         artDirectionHash: artDirection.hash, artDirectionSnapshot: { ...artDirection, images: undefined },
         parents: [{ tokenId: input.parentA, owner: ownerA, approval: null }, { tokenId: input.parentB, owner: ownerB, approval: null }],

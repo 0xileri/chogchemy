@@ -63,6 +63,7 @@
 <div id="parent-a-field"><label for="fusion-parent-a">Your Chog ID · First parent</label><input id="fusion-parent-a" inputmode="numeric" pattern="[0-9]+" placeholder="Your token ID" required></div>
 <div><label for="fusion-parent-b">Second Chog ID</label><input id="fusion-parent-b" inputmode="numeric" pattern="[0-9]+" placeholder="e.g. 1870" required aria-describedby="parent-id-help"></div>
 <button id="create-fusion" type="submit" disabled>Check the parents ↗</button>
+<div class="fusion-facing"><label for="fusion-facing">Which way should the child face?</label><select id="fusion-facing" aria-describedby="facing-help"><option value="auto">Let the AI choose</option><option value="left">← Face left</option><option value="right">Face right →</option></select><p id="facing-help" class="note">Left and right mean the sides of your screen. This guides the AI drawing; results may vary. To change a saved choice, start a new family.</p></div>
 <label class="fusion-policy"><input id="require-partner-approval" type="checkbox"> Ask the other holder to approve first (optional)</label>
 </form>
 <p id="parent-id-help" class="note">The Chog ID is the number at the end of its OpenSea link. You can use another Chog you own or a Chog held by someone else.</p>

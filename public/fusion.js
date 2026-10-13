@@ -9,6 +9,7 @@ const status = text => { $('fusion-status').textContent = text; };
 const short = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const active = request => ['awaiting_approvals', 'approved'].includes(request.state) && request.expires > Date.now();
 const optionalPartner = request => request.approvalPolicy === 'creator';
+const facingLabel = request => ({ left: 'Face left ←', right: 'Face right →', auto: 'AI chooses the facing' })[request.facing || 'auto'];
 const creationState = request => {
   if (['preparing', 'generating'].includes(request.stickers?.state)) return 'Child saved · Sticker pack drawing';
   if (request.stickers?.artwork && !request.comic?.artwork) return 'Child + stickers saved · No comic yet';
@@ -83,6 +84,7 @@ function controls() {
   $('child-budget').hidden ||= current?.state !== 'approved';
   $('comic-budget').hidden ||= !current?.canGenerateComic;
   $('create-fusion').disabled = busy || !address;
+  $('fusion-facing').disabled = busy || !address;
   $('change-chog').disabled = busy;
   $('refresh-invitation').disabled = busy;
   $('review-approval').hidden = !current || !active(current) || role < 0 || !!current.parents[role].approvedAt || (optionalPartner(current) && address === current.createdBy);
@@ -112,6 +114,7 @@ function render(request) {
   $('invitation-link').value = request.invitationUrl;
   $('invitation-state').textContent = creationState(request);
   $('invitation-approval-policy').textContent = request.artwork ? `Child created from Chogs #${request.parents.map(p => p.tokenId).join(' and #')}.` : optionalPartner(request) ? 'The parents are checked. You can create the child without an extra partner signature.' : request.state === 'approved' ? 'Both holders approved. You can create the child.' : 'Both holders need to approve before the child can be drawn.';
+  $('invitation-approval-policy').textContent += ` Facing choice: ${facingLabel(request)}.`;
   $('invitation-parents').replaceChildren();
   for (const [index, parent] of request.parents.entries()) {
     const card = document.createElement('article');
@@ -373,7 +376,7 @@ $('new-fusion').addEventListener('submit', event => {
     choosingNew = false;
     const attempt = operation;
     status('Checking both parents on Monad…');
-    const request = await api('/api/fusions', { parentA: $('fusion-parent-a').value.trim(), parentB: $('fusion-parent-b').value.trim(), requirePartnerApproval: $('require-partner-approval').checked });
+    const request = await api('/api/fusions', { parentA: $('fusion-parent-a').value.trim(), parentB: $('fusion-parent-b').value.trim(), facing: $('fusion-facing').value, requirePartnerApproval: $('require-partner-approval').checked });
     if (attempt !== operation) return;
     render(request);
     const url = new URL(location.href); url.searchParams.set('fusion', request.id); url.hash = 'fusion'; history.replaceState(null, '', url);
@@ -386,6 +389,7 @@ $('start-new-family').addEventListener('click', () => {
   choosingNew = true; operation++; current = null; resetMessage(); comicError(''); episodeError(''); stickerError(''); clearTimeout(poll);
   $('invitation-card').hidden = true;
   $('fusion-parent-b').value = ''; previewParent('b', true);
+  $('fusion-facing').value = 'auto';
   const url = new URL(location.href); url.searchParams.delete('fusion'); url.hash = 'fusion'; history.replaceState(null, '', url);
   controls(); status('Choose a second parent to start a new family. Your previous creations are still saved.');
   $('fusion').scrollIntoView({ behavior: 'smooth' });
