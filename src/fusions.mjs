@@ -129,7 +129,9 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     try {
       const initial = getRecord(id);
       const parents = await Promise.all(initial.parents.map(p => loadReference(chain, p.tokenId)));
-      const input = { parents, artDirection, facing: initial.facing || 'auto' };
+      let input = { parents, artDirection, facing: initial.facing || 'auto' };
+      // Compact provider copies if needed; retain original reference digests in the record.
+      if (imageGenerator.prepareInput) input = await imageGenerator.prepareInput(input);
       imageGenerator.validateInput?.(input);
       const dispatch = await serial(async () => {
         const record = getRecord(id);

@@ -1,14 +1,15 @@
 {
-  "version": "2",
+  "version": "3",
   "label": "Chogchemy artist comic style",
-  "description": "Comic fusion style guided by the finished drawing supplied by our collaborating artist.",
+  "description": "Comic fusion style guided by two finished drawings supplied by our collaborating artist, including the mushroom-and-skull fusion.",
   "rules": [
     "Create one new, coherent Chog-inspired creature, rather than two characters beside each other.",
     "Inherit recognizable shape, facial features, colors, and accessories from both parents in roughly equal measure.",
+    "Combine inherited traits into a design where they interact naturally, instead of just pasting unrelated accessories onto one parent. For example, if one selected parent has mushrooms and the other a cap, mushrooms can grow through the cap; a skull parent's bone shapes can inherit the other parent's skin colors. Apply this principle only to traits actually present in the selected parents.",
     "Follow the artist reference's bold, slightly rough black outlines, saturated colors, soft grainy texture, and simple shaded color shapes.",
-    "Use the artist drawing for rendering style only. Derive the character's features, clothing, accessories, and expression from the two parent NFT images, not from the style reference.",
+    "Use both artist drawings for rendering style only. Derive the character's features, clothing, accessories, and expression from the two parent NFT images, not from the style references. Do not copy mushrooms, skull anatomy, hats, or hoodies from a style reference unless the selected parents have those traits.",
     "Create a centered character portrait showing its head and upper body clearly within the frame, on a simple background using colors inspired by both parents.",
     "No captions, logos, signatures, watermarks, panels, or additional characters."
   ],
-  "references": ["comic-fusion-reference-v1.jpg"]
+  "references": ["comic-fusion-reference-v1.jpg", "mushroom-skull-fusion-reference-v1.jpg"]
 }

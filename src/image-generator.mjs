@@ -107,7 +107,7 @@ function createOrbioImageGenerator({ apiKey = process.env.ORBIO_API_KEY, model =
               .rotate().resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
               .flatten({ background: '#ffffff' }).jpeg({ quality }).toBuffer();
           } catch {
-            const error = new Error('Could not resize a family reference image. Your child artwork is saved.');
+            const error = new Error(`Could not resize a family reference image.${input.kind ? ' Your child artwork is saved.' : ' No child drawing request was sent.'}`);
             error.publicMessage = error.message; throw error;
           }
           compact.push({ ...image, bytes, mime: 'image/jpeg' });
@@ -116,7 +116,7 @@ function createOrbioImageGenerator({ apiKey = process.env.ORBIO_API_KEY, model =
         try { body(prepared); return prepared; }
         catch (error) { if (!error.publicMessage) throw error; }
       }
-      const error = new Error('The family references are still too large after compression. Your child artwork is saved.');
+      const error = new Error(`The family references are still too large after compression.${input.kind ? ' Your child artwork is saved.' : ' No child drawing request was sent.'}`);
       error.publicMessage = error.message; throw error;
     },
     async generate(input) {

@@ -11,6 +11,8 @@ import { loadParentReference, referenceUrl, limitedBytes } from '../src/referenc
 import { createImageGenerator } from '../src/image-generator.mjs';
 import { createApplication } from '../src/application.mjs';
 import { Readable } from 'node:stream';
+import sharp from 'sharp';
+import { randomBytes } from 'node:crypto';
 
 // A tiny synthetic PNG used only as a deterministic test result, never as AI artwork.
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5H0AAAAASUVORK5CYII=', 'base64');
@@ -333,12 +335,53 @@ test('Orbio provider never uses the OpenAI key or retries a rejected or malforme
   await assert.rejects(malformed.generate(input), /PNG|Reference images/);
 });
 
-test('oversized Orbio reference payload is rejected before dispatch and quota reservation', async () => {
+test('malformed oversized Orbio child references are rejected before dispatch and quota reservation', async () => {
   let calls = 0;
   const generator = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async () => { calls++; throw new Error('Must not dispatch'); } });
   const f = fixture({ imageGenerator: generator, loadReference: async () => ({ bytes: Buffer.alloc(1600000), mime: 'image/png' }) });
   const r = await f.create(); await f.service.generate(r.id, address(a)); await f.service.idle();
   assert.equal(calls, 0); assert.equal(f.service.get(r.id).state, 'approved');
   assert.equal(f.store.get(r.id).generation.providerStartedAt, undefined);
-  assert.match(f.service.get(r.id).generation.error, /Orbio request limit/);
+  assert.match(f.service.get(r.id).generation.error, /Could not resize/);
+  assert.doesNotMatch(f.service.get(r.id).generation.error, /child artwork is saved/);
+});
+
+test('child preparation compacts two artist references without changing original digests or facing', async () => {
+  const largeParent = await sharp(randomBytes(1100 * 1100 * 3), { raw: { width: 1100, height: 1100, channels: 3 } }).png().toBuffer();
+  const smallParent = await sharp({ create: { width: 1, height: 1, channels: 3, background: '#00ff00' } }).png().toBuffer();
+  const direction = loadArtDirection();
+  assert.equal(direction.version, '3'); assert.equal(direction.images.length, 2);
+  const hashes = direction.images.map(i => digest(i.bytes));
+  let calls = 0;
+  const generator = createImageGenerator({ provider: 'orbio', apiKey: 'sk-orbio-test-only', fetcher: async (_, options) => {
+    calls++; assert.ok(Buffer.byteLength(options.body) < 4000000);
+    const payload = JSON.parse(options.body);
+    assert.equal(payload.input_references.length, 4);
+    assert.match(payload.prompt, /CHILD FACING: LEFT/);
+    assert.match(payload.prompt, /traits actually present in the selected parents/);
+    assert.match(payload.prompt, /Do not copy mushrooms, skull anatomy/);
+    const metadata = await Promise.all(payload.input_references.map(r => sharp(Buffer.from(r.image_url.url.split(',')[1], 'base64')).metadata()));
+    assert.ok(metadata.every(m => m.format === 'jpeg'));
+    assert.equal(metadata[0].width, 1024); assert.equal(metadata[1].width, 1);
+    return Response.json({ data: [{ b64_json: png.toString('base64') }] });
+  } });
+  const f = fixture({ imageGenerator: generator, artDirection: direction, loadReference: async (_, tokenId) => {
+    const bytes = tokenId === '11' ? largeParent : smallParent;
+    return { tokenId, bytes, mime: 'image/png', digest: digest(bytes) };
+  } });
+  const r = await f.service.create(address(a), { parentA: '11', parentB: '22', facing: 'left', requirePartnerApproval: false });
+  await f.service.generate(r.id, address(a)); await f.service.idle();
+  assert.equal(f.service.get(r.id).state, 'generated', f.service.get(r.id).generation?.error);
+  assert.equal(calls, 1);
+  assert.equal(f.store.get(r.id).references[0].digest, digest(largeParent));
+  assert.deepEqual(direction.images.map(i => digest(i.bytes)), hashes);
+});
+
+test('cancelling during child reference compression prevents provider dispatch and quota use', async () => {
+  const wait = deferred(), started = deferred(); let dispatched = false;
+  const f = fixture({ imageGenerator: { async prepareInput(input) { started.resolve(); await wait.promise; return input; }, async generate() { dispatched = true; return { bytes: png }; } } });
+  const r = await f.create(); await f.service.generate(r.id, address(a)); await started.promise;
+  await f.service.cancel(r.id, address(a)); wait.resolve(); await f.service.idle();
+  assert.equal(dispatched, false); assert.equal(f.service.get(r.id).state, 'cancelled');
+  assert.equal(f.service.usage(address(a)).used, 0);
 });

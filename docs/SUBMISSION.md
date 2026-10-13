@@ -8,11 +8,13 @@ Builder: **@0xileri** — https://x.com/0xileri
 
 Comic artist: **@theejhay01** — https://x.com/theejhay01
 
-Discord handles: **[Add before submitting]**
+Builder Discord: **@0xileri**
+
+Artist Discord: **[Add if required by the submission form]**
 
 Website: https://chogchemy.up.railway.app
 
-Repository: https://github.com/0xileri/chogchemy (currently private; arrange judge access before submitting).
+Repository: https://github.com/0xileri/chogchemy (currently private; @0xileri plans to make it public when the build is finished, before judge review).
 
 Demo video: https://chogchemy.up.railway.app/watch
 
@@ -28,7 +30,7 @@ Chogchemy turns two Chog NFTs into an artist-guided AI child and a family comic,
 
 Chogchemy lets a Chog Genesis holder create a fictional family from two real Chog NFTs. Connect a holder wallet, choose two parents, create their child, then request a three-scene family comic: a wedding, a new arrival, and a family picnic. The comic uses the saved child as a reference so the story builds on the character already created.
 
-The studio uses an original fusion drawing from our collaborating comic artist, @theejhay01, to guide its outlines, color, texture and shading. AI generates the final child and comic. Both are saved, downloadable, and viewable on a public family page alongside the two parent NFT links and the recorded approval status. The family creator can also make a six-reaction sticker pack for chats: GM, crying, celebrating, hugs, sleepy and send help. A single image request creates the whole pack, exported as six transparent PNGs and a ZIP. A first comic is not required for stickers.
+The studio uses two original fusion drawings from our collaborating comic artist, @theejhay01, to guide its outlines, color, texture and shading. The second example combines mushrooms with a cap and a green face with skull teeth; it guides how traits can interact when they are present in the selected parents. The model is told to take character features from the actual parents, rather than copy accessories from the artist references. AI generates the final child and comic. Both are saved, downloadable, and viewable on a public family page alongside the two parent NFT links and the recorded approval status. The family creator can also make a six-reaction sticker pack for chats: GM, crying, celebrating, hugs, sleepy and send help. A single image request creates the whole pack, exported as six transparent PNGs and a ZIP. A first comic is not required for stickers.
 
 The distinctive experience is the complete chain from owned Chogs to a child to a family story. The artist supplies a recognizable visual direction, while the NFTs supply the specific parents and the holder supplies the authority to create.
 
@@ -65,9 +67,9 @@ See JUDGE-GUIDE.md for a short public review and the holder flow. The public res
 
 ## Pre-existing materials and disclosures
 
-Chog Genesis is an existing collection; the two parents are existing NFTs. @theejhay01 supplied an original hand-drawn fusion reference. Existing open-source libraries and the hosted image model provide infrastructure; coding assistants were used during development. The sample lab and automated fixtures generate procedural placeholder images and are labelled separately from real AI artwork. Local fixtures are excluded from deployment.
+Chog Genesis is an existing collection; the two parents are existing NFTs. @theejhay01 supplied two original hand-drawn fusion references. Existing open-source libraries and the hosted image model provide infrastructure; coding assistants were used during development. The sample lab and automated fixtures generate procedural placeholder images and are labelled separately from real AI artwork. Local fixtures are excluded from deployment.
 
-The project was developed during this Chogathon build. Confirm the artist reference's creation date and disclose any work created before the event if applicable.
+The project was developed during this Chogathon build. Confirm both artist references' creation dates and disclose any work created before the event if applicable.
 
 Outputs are artwork records, not minted NFTs. Original NFTs remain in their wallets. Family roots are stored in our database and are not independently attested on-chain. Optional partner approval is labelled honestly; an unsigned partner is not presented as having consented. Existing child approval signatures are not reused as approval for the comic. The project currently has no $CHOG or $CHMY spending integration.
 
@@ -87,8 +89,8 @@ Future work includes more story choices and opt-in collaborations between holder
 
 ## Before submitting
 
-1. Add Discord handles and check that the deployed video URL plays for judges.
-2. Make sure judges can access the private repository.
+1. Builder Discord is @0xileri. Add the artist's Discord if required, and check that the deployed video URL plays for judges.
+2. When the build is finished, @0xileri will make the repository public. Verify judge access before submitting.
 3. Confirm the pre-existing-work disclosure with both team members.
 4. Sign in to the existing Chogathon application. The registration page checked on 11 October 2026 says registrations are closed, with sign-in available for existing applicants; verify final submission access in that account.
 5. Review and submit the final text in the hackathon dashboard.
