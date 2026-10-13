@@ -13,6 +13,7 @@ const staticFiles = {
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
   '/character.js': ['character.js', 'text/javascript'], '/share.js': ['share.js', 'text/javascript'],
+  '/motion.js': ['motion.js', 'text/javascript'], '/motion.css': ['motion.css', 'text/css'],
   '/brand/chogchemy-logo-v1.png': ['../assets/brand/chogchemy-logo-v1.png', 'image/png'],
   '/brand/chogchemy-icon-v1.png': ['../assets/brand/chogchemy-icon-v1.png', 'image/png'],
   '/brand/chogchemy-banner-v1.png': ['../assets/brand/chogchemy-banner-v1.png', 'image/png'],
