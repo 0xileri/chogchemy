@@ -8,7 +8,8 @@ export async function getChogPreview(tokenId) {
   const promise = api(`/api/chog-preview?id=${encodeURIComponent(tokenId)}`).catch(error => { if (previewCache.get(tokenId)?.promise === promise) previewCache.delete(tokenId); throw error; });
   previewCache.set(tokenId, { promise, expires: Date.now() + 30000 }); return promise;
 }
-const status = text => { $('wallet-status').textContent = text; $('episode-wallet-status').textContent = text; $('sticker-wallet-status').textContent = text; };
+const status = text => { for (const id of ['wallet-status', 'episode-wallet-status', 'sticker-wallet-status']) if ($(id)) $(id).textContent = text; };
+const connectDisabled = value => { for (const id of ['connect-wallet', 'connect-wallet-main', 'connect-wallet-episodes', 'connect-wallet-stickers']) if ($(id)) $(id).disabled = value; };
 async function api(path, body) {
   const response = await fetch(path, { credentials: 'same-origin', ...(body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) });
   const data = await response.json();
@@ -58,7 +59,7 @@ async function contextMatches(expectedAddress) {
 async function connect() {
   if (busy) return;
   if (address) { document.getElementById('holder').scrollIntoView({ behavior: 'smooth' }); return; }
-  busy = true; $('connect-wallet').disabled = true; $('connect-wallet-main').disabled = true; $('connect-wallet-episodes').disabled = true; $('connect-wallet-stickers').disabled = true;
+  busy = true; connectDisabled(true);
   let authenticated = false;
   try {
     if (!window.ethereum?.request) throw new Error('Open this page in a browser with an Ethereum-compatible wallet extension, such as MetaMask or Rabby.');
@@ -101,7 +102,7 @@ async function connect() {
       if (authenticated) try { await api('/api/logout', {}); } catch { /* Server session will expire. */ }
     }
     status(error.code === 4001 ? 'You cancelled the wallet request. Connect again when ready.' : error.message);
-  } finally { busy = false; $('connect-wallet').disabled = false; $('connect-wallet-main').disabled = false; $('connect-wallet-episodes').disabled = false; $('connect-wallet-stickers').disabled = false; }
+  } finally { busy = false; connectDisabled(false); }
 }
 async function refreshChogs() {
   if (!address) return;
@@ -120,7 +121,7 @@ async function refreshChogs() {
       button.addEventListener('click', () => { $('token-id').value = tokenId; void lookup(); }); $('owned-chogs').append(button);
     }
     if (result.tokenIds?.length === result.limit && BigInt(result.balance) > BigInt(result.limit)) $('balance-status').textContent += ` Showing the first ${result.limit}; look up others by ID.`;
-    status('Wallet connected. Choose your Chog as the first parent.');
+    status(document.body.dataset.studio === 'memes' ? 'Wallet connected. Choose the Chog to star in your meme.' : 'Wallet connected. Choose your Chog as the first parent.');
     if (result.balance === '1' && result.tokenIds?.length === 1) { $('token-id').value = result.tokenIds[0]; await lookup(); }
   } catch (error) { if (attempt === revision) { $('balance-status').textContent = ''; status(error.message); } }
   finally { $('refresh-chogs').disabled = false; }
@@ -141,7 +142,7 @@ async function lookup() {
     $('chog-record').textContent = `Checked ${new Date(token.checkedAt).toLocaleString()} · Holder ${token.owner}`;
     $('chog-link').href = `https://opensea.io/item/monad/${token.collection.address}/${token.tokenId}`;
     $('chog-traits').textContent = 'Loading artwork and traits…'; $('chog-art').textContent = '✳'; $('verified-chog').hidden = false;
-    status('Your Chog is selected. Add the other Chog below.');
+    status(document.body.dataset.studio === 'memes' ? 'Your Chog is selected. Pick a meme template below.' : 'Your Chog is selected. Add the other Chog below.');
     window.dispatchEvent(new CustomEvent('chogchemy:token', { detail: { tokenId: token.tokenId } }));
     try {
       const metadata = await getChogPreview(token.tokenId);
@@ -164,8 +165,8 @@ window.addEventListener('chogchemy:choose-token', () => {
 });
 $('connect-wallet').addEventListener('click', connect);
 $('connect-wallet-main').addEventListener('click', connect);
-$('connect-wallet-episodes').addEventListener('click', connect);
-$('connect-wallet-stickers').addEventListener('click', connect);
+$('connect-wallet-episodes')?.addEventListener('click', connect);
+$('connect-wallet-stickers')?.addEventListener('click', connect);
 $('disconnect-wallet').addEventListener('click', disconnect);
 $('refresh-chogs').addEventListener('click', refreshChogs);
 $('lookup-chog').addEventListener('submit', event => { event.preventDefault(); void lookup(); });

@@ -3,8 +3,8 @@ const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
 const revealed = new WeakSet(), zoomable = new WeakSet();
 let observed = new WeakSet();
 const visibleImages = new Set(), animations = new Set();
-const revealSelector = '.intro-copy, .intro-mark, .demo-intro, .section-title, .studio-steps > a, .token-previews article, .invitation-parents article, .invitation-item, .gallery-card, .sticker-card, .character-copy, .next-step, .simple-about';
-const artSelector = '.intro-mark img, .gallery-card img, .parent-art img, .character-art img, .comic-art img, #generated-image, #comic-image, .sticker-card img';
+const revealSelector = '.intro-copy, .intro-mark, .demo-intro, .section-title, .studio-steps > a, .token-previews article, .invitation-parents article, .invitation-item, .gallery-card, .sticker-card, .meme-template-card, .character-copy, .next-step, .simple-about';
+const artSelector = '.intro-mark img, .gallery-card img, .parent-art img, .character-art img, .comic-art img, #generated-image, #comic-image, .sticker-card img, .meme-template-card img';
 const zoomSelector = '.character-art > img, .comic-art > img, #generated-image, #comic-image';
 let revealObserver, artObserver, frame = 0, scanFrame = 0, viewer = null, progress = null;
 
@@ -32,14 +32,16 @@ function schedule() { if (!frame && !preference.matches) frame = requestAnimatio
 function setupObservers() {
   if (preference.matches || !window.IntersectionObserver) return;
   revealObserver = new IntersectionObserver(entries => {
+    if (preference.matches) return;
     for (const entry of entries) {
       if (!entry.isIntersecting || revealed.has(entry.target)) continue;
-      revealed.add(entry.target); revealObserver.unobserve(entry.target);
+      revealed.add(entry.target); revealObserver?.unobserve(entry.target);
       // Nothing is hidden while waiting for an observer or if scripts fail.
       animate(entry.target, [{ opacity: 0.3, transform: 'translateY(20px) scale(.985)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 560, easing: 'cubic-bezier(.2,.8,.2,1)' });
     }
   }, { threshold: 0.05 });
   artObserver = new IntersectionObserver(entries => {
+    if (preference.matches) return;
     for (const entry of entries) { if (entry.isIntersecting) visibleImages.add(entry.target); else visibleImages.delete(entry.target); }
     schedule();
   }, { rootMargin: '40px' });
@@ -104,4 +106,10 @@ document.addEventListener('click', event => {
   const target = event.target.closest?.('button, a.button, .studio-steps > a');
   if (target && !target.disabled && !preference.matches) animate(target, [{ transform: 'scale(.97)' }, { transform: 'scale(1)' }], { duration: 180, easing: 'ease-out' });
 });
-new MutationObserver(() => { if (!scanFrame) scanFrame = requestAnimationFrame(scan); }).observe(document.querySelector('main') || document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'src'] });
+new MutationObserver(records => {
+  for (const record of records) for (const removed of record.removedNodes) {
+    if (!(removed instanceof Element)) continue;
+    for (const element of [removed, ...removed.querySelectorAll('*')]) { revealObserver?.unobserve(element); artObserver?.unobserve(element); visibleImages.delete(element); }
+  }
+  if (!scanFrame) scanFrame = requestAnimationFrame(scan);
+}).observe(document.querySelector('main') || document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'src'] });

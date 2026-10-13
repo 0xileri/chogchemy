@@ -18,27 +18,33 @@ Repository: https://github.com/0xileri/chogchemy (currently private; @0xileri pl
 
 Demo video: https://chogchemy.up.railway.app/watch
 
+The current video shows the recorded family workflow. Record an updated meme walkthrough after reviewing a real Chog meme output; synthetic test artwork should not be presented as a live AI demo.
+
 Direct MP4: https://chogchemy.up.railway.app/demo-video.mp4
 
 The video is a narrated screenshot walkthrough of live pages and saved real results, with synthetic voice narration. Duration: about 2 minutes 52 seconds. It does not present image generation as instant.
 
 ## Project pitch, one line
 
-Chogchemy turns two Chog NFTs into an artist-guided AI child and a family comic, saved with links to the original parents.
+Chogchemy puts your verified Chog NFT into popular memes, with 100 searchable templates, artist-guided AI scenes, and saved, shareable results.
 
 ## What we built
+
+The main studio is Chog Memes. A holder connects their wallet, chooses their actual Chog NFT, and picks from 100 popular templates in an Imgflip snapshot. The AI receives the specific NFT artwork and chosen template as references, then replaces the scene's main character with that Chog. An optional role description identifies the subject in a crowded scene. Top and bottom captions are drawn locally in separate bars so their spelling stays exact; they do not replace the template's original caption-box layout. PNG downloads, public meme pages, a meme wall, saved requests and a shared drawing allowance are included. Template interpretation and real-output quality still need review; synthetic fixtures test the interface and storage, not artistic quality. Source: https://imgflip.com/api and MEME-CATALOG.md.
+
+The homepage now leads with memes. The family studio remains available at https://chogchemy.up.railway.app/families, and existing family links continue to work. Scroll reveals, subtle artwork zoom, responsive click feedback, and an accessible enlarged-artwork viewer have reduced-motion support.
 
 Chogchemy lets a Chog Genesis holder create a fictional family from two real Chog NFTs. Connect a holder wallet, choose two parents, create their child, then request a three-scene family comic: a wedding, a new arrival, and a family picnic. The comic uses the saved child as a reference so the story builds on the character already created.
 
 The studio uses two original fusion drawings from our collaborating comic artist, @theejhay01, to guide its outlines, color, texture and shading. The second example combines mushrooms with a cap and a green face with skull teeth; it guides how traits can interact when they are present in the selected parents. The model is told to take character features from the actual parents, rather than copy accessories from the artist references. AI generates the final child and comic. Both are saved, downloadable, and viewable on a public family page alongside the two parent NFT links and the recorded approval status. The family creator can also make a six-reaction sticker pack for chats: GM, crying, celebrating, hugs, sleepy and send help. A single image request creates the whole pack, exported as six transparent PNGs and a ZIP. A first comic is not required for stickers.
 
-The distinctive experience is the complete chain from owned Chogs to a child to a family story. The artist supplies a recognizable visual direction, while the NFTs supply the specific parents and the holder supplies the authority to create.
+The Chog becomes a recognizable recurring character across meme scenes, family stories and stickers. The artist supplies visual direction, the NFTs supply the characters, and the verified holder supplies the authority to create.
 
 ## Why the Chog NFT matters
 
-A verified Chog Genesis holder wallet unlocks the real studio. The server checks the two parent NFTs and their owners, uses their actual artwork to guide the child, and records their token IDs as its roots. The family comic uses those same parents plus the saved child. Ownership is checked again before generation; a changed parent owner prevents a new comic for that family.
+A verified Chog Genesis holder wallet unlocks the real studio. For memes, the server checks ownership of the chosen NFT before preparation and again immediately before dispatch. Its actual artwork is the character reference, and the saved meme links to that specific token. There is no arbitrary image-upload alternative. For families, the server checks the two parent NFTs and their owners, uses their artwork to guide the child, and records their token IDs as its roots. The family comic uses those same parents plus the saved child. A changed parent owner prevents a new comic for that family.
 
-Take the Chog NFTs out and the holder checks, selection of real parent characters, and NFT-linked family record stop working. The no-wallet sample lab only demonstrates procedural placeholders; it does not create real Chog families or AI comics.
+Take the Chog NFTs out and the holder checks, selection of real characters, and NFT-linked meme and family records stop working. The no-wallet sample lab only demonstrates procedural placeholders; it does not create real Chog memes, families or AI comics.
 
 ## Working demo and testing instructions
 
@@ -88,6 +94,8 @@ Saved families can now create three more episodes: a first adventure, a first sc
 Future work includes more story choices and opt-in collaborations between holders. We will use feedback to test repeat use before expanding the story system.
 
 ## Before submitting
+
+- Create and review a real Chog meme, then update the demo video to lead with the meme studio. The existing family walkthrough remains available.
 
 1. Builder Discord is @0xileri. Add the artist's Discord if required, and check that the deployed video URL plays for judges.
 2. When the build is finished, @0xileri will make the repository public. Verify judge access before submitting.

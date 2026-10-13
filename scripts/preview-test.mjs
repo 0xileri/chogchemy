@@ -18,10 +18,11 @@ const chain = {
 const fixturePng = fixtureArt(true);
 const app = createApplication({ chain, origin, generationOptions: {
   holderDailyLimit: 4,
+  templateLoader: async template => ({ bytes: fixturePng, mime: 'image/png', templateId: template.id }),
   loadReference: async (_, tokenId) => ({ tokenId, bytes: fixturePng, mime: 'image/png', name: 'Synthetic parent', traits: [] }),
   imageGenerator: { configured: true, mode: 'fixture', model: 'synthetic-test', async generate({ kind }) { return { bytes: kind === 'stickers' ? await fixtureStickerSheet() : kind === 'comic' ? fixtureComic() : fixturePng, mode: 'fixture', model: 'synthetic-test' }; } },
 } });
-const html = (await readFile(new URL('../public/index.html', import.meta.url), 'utf8')).replaceAll('__APP_ORIGIN__', origin).replace('<body>', `<body><aside style="padding:16px;background:#ffe7a0;color:#302600;position:relative">LOCAL TEST FIXTURE · Synthetic wallets and NFTs only. <button id="test-a">Test wallet A</button> <button id="test-b">Test wallet B</button> <span id="test-account">Wallet A selected</span></aside><script>
+const inject = source => source.replaceAll('__APP_ORIGIN__', origin).replace(/<body(?: [^>]*)?>/, `$&<aside style="padding:16px;background:#ffe7a0;color:#302600;position:relative">LOCAL TEST FIXTURE · Synthetic wallets and NFTs only. <button id="test-a">Test wallet A</button> <button id="test-b">Test wallet B</button> <span id="test-account">Wallet A selected</span></aside><script>
 let slot = 0; const accounts = ${JSON.stringify(accounts.map(a => a.address))}; const listeners = new Map();
 window.ethereum = {
   async request({ method, params }) {
@@ -40,8 +41,11 @@ window.ethereum = {
 function switchWallet(next) { slot = next; document.getElementById('test-account').textContent = 'Wallet ' + (slot === 0 ? 'A' : 'B') + ' selected'; for (const callback of listeners.get('accountsChanged') || []) callback([accounts[slot]]); }
 document.getElementById('test-a').onclick = () => switchWallet(0); document.getElementById('test-b').onclick = () => switchWallet(1);
 </script>`);
+const html = inject(await readFile(new URL('../public/index.html', import.meta.url), 'utf8'));
+const familyHtml = inject(await readFile(new URL('../public/families.html', import.meta.url), 'utf8'));
 createServer(async (req, res) => {
-  if (req.method === 'GET' && new URL(req.url, origin).pathname === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(html); return; }
+  const url = new URL(req.url, origin);
+  if (req.method === 'GET' && ['/', '/families'].includes(url.pathname)) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(url.pathname === '/families' || url.searchParams.has('fusion') ? familyHtml : html); return; }
   if (req.method === 'POST' && req.url === '/__test/sign') {
     try {
       if (req.headers.origin !== origin) throw new Error('Wrong origin');

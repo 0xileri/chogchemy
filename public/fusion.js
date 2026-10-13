@@ -23,7 +23,7 @@ const resetTime = () => new Date(drawingUsage?.resetsAt || (Math.floor(Date.now(
 function budgetText() {
   if (!drawingUsage) return '';
   if (!drawingUsage.remaining || !drawingUsage.globalRemaining) return `Today's drawing limit is used up. Try again ${resetTime()} (your local time). Your saved artwork is still here.`;
-  return `${drawingUsage.remaining} of ${drawingUsage.limit} drawing requests left today. Each child, comic, episode, or six-sticker pack uses one request.`;
+  return `${drawingUsage.remaining} of ${drawingUsage.limit} drawing requests left today. Each meme, child, comic, episode, or six-sticker pack uses one request.`;
 }
 async function refreshUsage() {
   const address = getWalletAddress(); if (!address) return;
@@ -79,7 +79,7 @@ function controls() {
   $('start-new-family').disabled = busy;
   $('drawing-usage').hidden = !address;
   $('drawing-remaining').textContent = drawingUsage ? `${drawingUsage.remaining} drawing request${drawingUsage.remaining === 1 ? '' : 's'} left today` : 'Checking your drawing allowance…';
-  $('drawing-usage-note').textContent = drawingUsage ? `${drawingUsage.used} of ${drawingUsage.limit} used. One request per child, comic, episode, or sticker pack. Resets ${resetTime()} (your local time).${!drawingUsage.globalRemaining ? ' The studio-wide daily limit is also used up.' : ''}` : 'Your allowance appears here after wallet verification.';
+  $('drawing-usage-note').textContent = drawingUsage ? `${drawingUsage.used} of ${drawingUsage.limit} used. One request per meme, child, comic, episode, or sticker pack. Resets ${resetTime()} (your local time).${!drawingUsage.globalRemaining ? ' The studio-wide daily limit is also used up.' : ''}` : 'Your allowance appears here after wallet verification.';
   for (const id of ['child-budget', 'comic-budget']) { $(id).hidden = !address || !drawingUsage; $(id).textContent = budgetText(); }
   $('child-budget').hidden ||= current?.state !== 'approved';
   $('comic-budget').hidden ||= !current?.canGenerateComic;

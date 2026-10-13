@@ -6,6 +6,7 @@ import { loadParentReference } from './reference-assets.mjs';
 import { createFamilyComicService } from './family-comics.mjs';
 import { createFamilyEpisodeService, episodeStories } from './family-episodes.mjs';
 import { createFamilyStickerService } from './family-stickers.mjs';
+import { createMemeService } from './memes.mjs';
 
 export class FusionError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -32,7 +33,7 @@ export function approvalMessage(record, owner) {
   ].join('\n');
 }
 
-export function createFusionService({ store, chain, origin, now = Date.now, imageGenerator = null, artDirection = loadArtDirection(), loadReference = loadParentReference, dailyLimit = 10, holderDailyLimit = 2, concurrency = 2 }) {
+export function createFusionService({ store, chain, origin, now = Date.now, imageGenerator = null, artDirection = loadArtDirection(), loadReference = loadParentReference, templateLoader, dailyLimit = 10, holderDailyLimit = 2, concurrency = 2 }) {
   for (const value of [dailyLimit, holderDailyLimit, concurrency]) if (!Number.isSafeInteger(value) || value < 1) throw new Error('Generation limits must be positive integers.');
   const jobs = new Set();
   // A provider may have charged a request interrupted by a process restart. Never retry it automatically.
@@ -55,7 +56,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
   function getRecord(id) {
     if (typeof id !== 'string' || !/^[a-f0-9]{64}$/.test(id)) fail(404, 'Fusion invitation not found.');
     const record = store.get(id);
-    if (!record || record.origin !== origin || record.collection !== collection.address || record.chainId !== collection.chainId) fail(404, 'Fusion invitation not found.');
+    if (!record || record.kind === 'meme' || record.origin !== origin || record.collection !== collection.address || record.chainId !== collection.chainId) fail(404, 'Fusion invitation not found.');
     if (record.expires <= now() && ['awaiting_approvals', 'approved', 'preparing'].includes(record.state)) { record.state = 'expired'; store.put(record); }
     return record;
   }
@@ -173,7 +174,9 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
   const comics = createFamilyComicService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   const episodes = createFamilyEpisodeService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   const stickers = createFamilyStickerService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
+  const memes = createMemeService({ store, chain, origin, serial, jobs, checkQuota, fail, artDirection, imageGenerator, loadReference, templateLoader, now });
   return {
+    createMeme: memes.create, getMeme: memes.get, listMemes: memes.list, generateMeme: memes.generate, cancelMeme: memes.cancel, memeArtwork: memes.artwork, memeGallery: memes.gallery,
     usage,
     generateComic: comics.generate,
     cancelComic: comics.cancel,
@@ -185,7 +188,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
     cancelStickers: stickers.cancel,
     stickerAsset: stickers.asset,
     idle() { return Promise.all([...jobs]); },
-    gallery() { return store.all().filter(r => r.origin === origin && r.state === 'generated').sort((a, b) => b.artwork.createdAt - a.artwork.createdAt).slice(0, 24).map(r => view(r)); },
+    gallery() { return store.all().filter(r => r.kind !== 'meme' && r.origin === origin && r.state === 'generated').sort((a, b) => b.artwork.createdAt - a.artwork.createdAt).slice(0, 24).map(r => view(r)); },
     artwork(id) { const record = getRecord(id); if (record.state !== 'generated') fail(404, 'Artwork not found.'); return store.artwork(id); },
     generate(id, address) { return serial(async () => {
       const record = getRecord(id); participant(record, address);
@@ -202,7 +205,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
       job.finally(() => jobs.delete(job)).catch(() => {});
       return view(record, address);
     }); },
-    list(address) { return store.list(address).filter(r => r.origin === origin).map(r => view(getRecord(r.id), address)); },
+    list(address) { return store.all().filter(r => r.kind !== 'meme' && r.origin === origin && r.parents.some(p => p.owner === address)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 30).map(r => view(getRecord(r.id), address)); },
     get(id, address) { return view(getRecord(id), address); },
     create(address, input) { return serial(async () => {
       if (!input || !tokenIdValid(input.parentA) || !tokenIdValid(input.parentB)) fail(400, 'Enter both numeric token IDs from the OpenSea URLs.');

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chogchemy — Create your Chog family.</title>
+<meta name="description" content="Choose two Chog NFTs, create their child, then draw a three-panel family comic. Save and share both artworks with Chogchemy.">
+<meta name="theme-color" content="#F7F6ED">
+<link rel="icon" type="image/png" href="/brand/chogchemy-icon-v1.png"><link rel="apple-touch-icon" href="/brand/chogchemy-icon-v1.png">
+<link rel="canonical" href="__APP_ORIGIN__/families">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Chogchemy">
+<meta property="og:title" content="Chogchemy — Create your Chog family.">
+<meta property="og:description" content="Two Chogs become a child and a family comic. Create, save and share their story.">
+<meta property="og:url" content="__APP_ORIGIN__/"><meta property="og:image" content="__APP_ORIGIN__/brand/chogchemy-banner-v1.png">
+<meta property="og:image:width" content="2172"><meta property="og:image:height" content="724"><meta property="og:image:alt" content="Chogchemy — Two Chogs. One new character.">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Chogchemy — Create your Chog family.">
+<meta name="twitter:description" content="Create a child and a family comic from two Chog NFTs."><meta name="twitter:image" content="__APP_ORIGIN__/brand/chogchemy-banner-v1.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/motion.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header>
+<a class="brand" href="/" aria-label="Chogchemy home"><img src="/brand/chogchemy-logo-v1.png" alt="Chogchemy" width="2172" height="724" fetchpriority="high"></a>
+<nav class="header-links" aria-label="Main navigation"><a href="/">Chog Memes</a><a class="creation-nav" href="#my-creations">My creations</a><a class="family-nav" href="#descendants">Gallery</a></nav>
+<button id="connect-wallet" type="button">Connect wallet</button>
+</header>
+<main id="main-content">
+<section class="intro">
+<div class="intro-copy"><span class="eyebrow">YOUR CHOGS. THEIR FAMILY STORY.</span><h1>Turn two Chogs<br>into a <em>family.</em></h1>
+<p>Choose two Chog NFTs. Create their child, then make family comics and sticker packs for chats.</p>
+<div class="intro-actions"><a class="button" href="#holder">Start my family ↗</a><a class="sample-link" href="/demo">Try the demo first</a></div>
+<span class="note">You need one Chog Genesis NFT to create. The demo needs no wallet.</span>
+</div>
+<figure class="intro-mark"><img src="/brand/chogchemy-icon-v1.png" alt="Two lime and pink forms meeting around a fusion spark" width="1254" height="1254"><figcaption>TWO PARENTS → A CHILD → A COMIC</figcaption></figure>
+</section>
+<nav class="studio-steps" aria-label="Create your family in three steps">
+<a id="step-connect" href="#holder" aria-current="step"><span>01</span><div><strong>Connect your wallet</strong><p>We'll find the Chogs you own.</p></div></a>
+<a id="step-child" href="#fusion"><span>02</span><div><strong>Create the child</strong><p>Choose two Chogs and combine them.</p></div></a>
+<a id="step-comic" href="#fusion"><span>03</span><div><strong>Create the comic</strong><p>Turn the saved child into a family story.</p></div></a>
+</nav>
+<section id="holder">
+<div class="section-title"><div><span class="eyebrow">STEP 1 / YOUR WALLET</span><h2>Connect your Chog wallet.</h2></div><a class="badge" href="https://opensea.io/collection/chog-genesis" target="_blank" rel="noopener noreferrer">Chog Genesis ↗</a></div>
+<p>Use the wallet that holds your Chog. Sign a login message so we can check ownership. Your NFTs stay in your wallet.</p>
+<button id="connect-wallet-main" type="button">Connect my wallet</button>
+<p id="wallet-status" role="status">Connect to start creating or reopen your saved work.</p>
+<div id="holder-tools" hidden>
+<div class="controls"><button id="refresh-chogs" type="button">Refresh my Chogs</button><button id="disconnect-wallet" class="secondary" type="button">Disconnect</button></div>
+<p id="balance-status" role="status"></p><div id="owned-chogs" class="token-list"></div>
+<details id="manual-chog"><summary>Can't find your Chog? Look it up by ID</summary><form id="lookup-chog" class="controls"><label for="token-id">Chog token ID</label><input id="token-id" name="tokenId" inputmode="numeric" pattern="[0-9]+" placeholder="e.g. 1557" required><button type="submit">Check my Chog</button></form><p class="note">Use the number at the end of your NFT's OpenSea URL.</p></details>
+<article id="verified-chog" hidden><div id="chog-art" class="portrait"></div><h3 id="chog-name"></h3><p id="chog-traits"></p><p id="chog-proof"></p><details class="record-details"><summary>Record details</summary><p id="chog-record" class="note"></p></details><a id="chog-link" target="_blank" rel="noopener noreferrer">View original NFT ↗</a></article>
+</div>
+</section>
+<section id="my-creations" class="saved-creations">
+<div class="section-title"><div><span class="eyebrow">PICK UP WHERE YOU LEFT OFF</span><h2>My creations.</h2></div><button id="start-new-family" class="secondary" type="button" hidden>Start a new family</button></div>
+<p id="saved-wallet-hint">Connect your wallet to find your saved children, comics and work in progress.</p>
+<div id="my-invitations" hidden><p>Open a saved creation to continue. A child and its comic are saved separately.</p><div id="invitation-list" class="saved-list"></div></div>
+<div id="drawing-usage" class="drawing-usage" hidden><strong id="drawing-remaining"></strong><p id="drawing-usage-note"></p></div>
+</section>
+<section id="fusion">
+<div class="section-title"><div><span class="eyebrow">STEP 2 / THE CHILD</span><h2>Choose the two parents.</h2></div></div>
+<p>Your selected Chog is the first parent. Enter the ID of a second Chog, then check both parents before creating their child.</p>
+<p id="wallet-hint" class="note">Complete step 1 to unlock this form.</p>
+<div id="parent-picker"><form id="new-fusion" class="fusion-form">
+<div id="parent-a-field"><label for="fusion-parent-a">Your Chog ID · First parent</label><input id="fusion-parent-a" inputmode="numeric" pattern="[0-9]+" placeholder="Your token ID" required></div>
+<div><label for="fusion-parent-b">Second Chog ID</label><input id="fusion-parent-b" inputmode="numeric" pattern="[0-9]+" placeholder="e.g. 1870" required aria-describedby="parent-id-help"></div>
+<button id="create-fusion" type="submit" disabled>Check the parents ↗</button>
+<div class="fusion-facing"><label for="fusion-facing">Which way should the child face?</label><select id="fusion-facing" aria-describedby="facing-help"><option value="auto">Let the AI choose</option><option value="left">← Face left</option><option value="right">Face right →</option></select><p id="facing-help" class="note">Left and right mean the sides of your screen. This guides the AI drawing; results may vary. To change a saved choice, start a new family.</p></div>
+<label class="fusion-policy"><input id="require-partner-approval" type="checkbox"> Ask the other holder to approve first (optional)</label>
+</form>
+<p id="parent-id-help" class="note">The Chog ID is the number at the end of its OpenSea link. You can use another Chog you own or a Chog held by someone else.</p>
+<div id="fusion-previews" class="token-previews">
+<article id="parent-preview-a" hidden><div class="selected-parent-heading"><span class="eyebrow">FIRST PARENT / YOUR CHOG</span><button id="change-chog" class="secondary" type="button" hidden>Change Chog</button></div><div id="parent-art-a" class="parent-art"></div><h3 id="parent-title-a"></h3><p id="parent-note-a" role="status"></p></article>
+<article id="parent-preview-b" hidden><span class="eyebrow">SECOND PARENT</span><div id="parent-art-b" class="parent-art"></div><h3 id="parent-title-b"></h3><p id="parent-note-b" role="status"></p></article>
+</div>
+ </div>
+<p id="fusion-status" role="status">Choose the parents above, or open a saved creation.</p>
+<article id="invitation-card" hidden>
+<div class="section-title"><h3 id="invitation-state"></h3><button id="refresh-invitation" class="secondary" type="button">Refresh progress</button></div>
+<p id="invitation-approval-policy" class="note"></p><div id="invitation-parents" class="invitation-parents"></div>
+<details class="record-details"><summary>Share with a partner</summary><label for="invitation-link">Creation link</label><div class="share-row"><input id="invitation-link" readonly><button id="copy-invitation" type="button">Copy link</button></div><p id="invitation-role"></p></details>
+<details class="record-details" id="invitation-details"><summary>Record details</summary><p id="invitation-expiry" class="note"></p><p id="ownership-check" class="note"></p><p id="invitation-approval-times" class="note"></p><p id="invitation-style-hash" class="note"></p></details>
+<div class="controls"><button id="review-approval" type="button" hidden>Review my approval</button><button id="recheck-invitation" class="secondary" type="button" hidden>Recheck ownership</button><button id="cancel-invitation" class="secondary" type="button" hidden>Cancel this creation</button></div>
+<div id="approval-review" hidden><h3>Read before you sign.</h3><pre id="approval-message"></pre><label class="consent"><input id="approval-confirm" type="checkbox"> I approve this one fusion using the listed parents and art direction.</label><button id="sign-fusion" type="button" disabled>Sign fusion approval</button></div>
+<p id="ready-note" hidden></p><p id="child-budget" class="note" hidden></p><button id="generate-artwork" type="button" hidden>Create the child ✳</button><p id="generation-note" role="status" hidden></p>
+<div id="child-next" class="next-step" hidden><div><span class="eyebrow">CHILD SAVED</span><h3 id="child-next-title">Next: create the family comic.</h3><p id="child-next-note">The child is one artwork. The comic and sticker pack are separate drawings.</p></div><a id="next-comic" class="button" href="#family-comic-studio">Go to the comic ↓</a><a id="next-stickers" class="button secondary" href="#family-stickers-studio">Make chat stickers ↓</a></div>
+<figure id="generated-result" hidden><h3>Your child artwork.</h3><img id="generated-image" alt="Your child character made from the two parent Chogs"><figcaption id="artwork-caption"></figcaption><div class="character-actions"><a id="download-artwork" class="button" download="chogchemy.png">Download child ↓</a><a id="view-character" class="button secondary">Open family page ↗</a><button id="share-finished-character" class="secondary" type="button">Share child ↗</button></div></figure>
+<section id="family-comic-studio" class="family-comic-section" hidden>
+<span class="eyebrow">STEP 3 / THE FAMILY COMIC</span><h3>Create their first family story.</h3>
+<p>Draw one comic with three scenes, starring both parents and the child you just saved.</p>
+<ol class="comic-chapters"><li><span>01</span><strong>The wedding</strong><p>The two parents say “I do.”</p></li><li><span>02</span><strong>The new arrival</strong><p>They welcome your saved child.</p></li><li><span>03</span><strong>Family life</strong><p>The family enjoys a playful picnic.</p></li></ol>
+<p id="comic-budget" class="note" hidden></p>
+<button id="generate-comic" type="button" hidden>Create the family comic ✳</button><button id="cancel-comic" class="secondary" type="button" hidden>Cancel comic preparation</button>
+<p id="comic-status" role="status"></p><p id="comic-error" role="alert" hidden></p><p id="comic-access" class="note"></p>
+<figure id="comic-result" hidden><h3>Your family comic.</h3><img id="comic-image" alt="Three-panel family comic: the wedding, the new arrival, and a family picnic"><figcaption id="comic-caption"></figcaption><div class="character-actions"><a id="download-comic" class="button" download="chogchemy-family.png">Download comic ↓</a><a id="view-family" class="button secondary">Open family page ↗</a><button id="share-family" class="secondary" type="button">Share comic ↗</button></div></figure>
+<details id="comic-record" class="record-details" hidden><summary>Record details</summary><p id="comic-record-text" class="note"></p></details>
+<section id="family-episodes-studio" class="episode-studio" hidden>
+<span class="eyebrow">KEEP THE FAMILY STORY GOING</span><h3>Create their next episode.</h3>
+<p>The same parents and saved child, in a new three-scene story. Pick a first adventure, a school day, or a birthday surprise. Each story can be created once for this family.</p>
+<div id="episode-creator" hidden><label for="episode-story">Choose the next story</label><select id="episode-story"></select><p id="episode-chapters" class="note"></p><p id="episode-budget" class="note"></p><button id="generate-episode" type="button">Create the next episode ✳</button></div>
+<p id="episode-access" class="note"></p><p id="episode-error" role="alert" hidden></p>
+<button id="connect-wallet-episodes" type="button" hidden>Connect creator wallet</button><p id="episode-wallet-status" class="note" role="status" hidden></p>
+<div id="episode-list" class="episode-list"></div>
+</section>
+</section>
+<section id="family-stickers-studio" class="family-comic-section sticker-studio" hidden>
+<span class="eyebrow">YOUR FAMILY / IN THE GROUP CHAT</span><h3>Make their sticker pack.</h3>
+<p>Six reactions starring your saved child and parents: GM, crying, celebrating, hugs, sleepy, and send help. One drawing request creates the whole pack.</p>
+<p id="sticker-budget" class="note" hidden></p><button id="generate-stickers" type="button" hidden>Create my sticker pack ✳</button><button id="cancel-stickers" class="secondary" type="button" hidden>Cancel sticker preparation</button>
+<p id="sticker-status" role="status"></p><p id="sticker-error" role="alert" hidden></p><p id="sticker-access" class="note"></p>
+<button id="connect-wallet-stickers" type="button" hidden>Connect creator wallet for stickers</button><p id="sticker-wallet-status" class="note" role="status" hidden></p>
+<div id="sticker-result" hidden><p id="sticker-caption" class="note"></p><div id="sticker-grid" class="sticker-grid"></div><div class="character-actions"><a id="download-sticker-pack" class="button" download="chogchemy-stickers.zip">Download all six · ZIP ↓</a><a id="view-stickers" class="button secondary">Open public sticker pack ↗</a></div><p class="note">These are transparent PNG images. To use them as stickers, add them through a supported sticker tool in your chat app. The ZIP bundles the files for download.</p></div>
+</section>
+</article>
+</section>
+<section id="descendants"><div class="section-title"><div><span class="eyebrow">MADE WITH CHOGCHEMY</span><h2>Explore creations.</h2></div></div><p>Child artwork appears first. A “Comic saved” badge means its family story is ready to view too.</p><div id="live-gallery"></div></section>
+<section id="about" class="simple-about"><span class="eyebrow">BEFORE YOU START</span><h2>A story you can keep.</h2><p>Chogchemy uses your Chog NFT to unlock the studio. The two parents inspire the child, and the child stars in the family comic. Their comics and six-reaction sticker packs are saved and shareable.</p><p class="note">AI artwork in our comic artist's style. Fictional character stories. Original NFTs stay in their wallets; no new NFT is minted.</p><a class="text-link" href="/demo">See how it works in the demo ↗</a><p><a class="text-link" href="/watch">Watch a real family walkthrough · 2:52 ↗</a></p></section>
+</main>
+<footer><a class="brand footer-brand" href="/" aria-label="Chogchemy home"><img src="/brand/chogchemy-logo-v1.png" alt="Chogchemy" width="2172" height="724"></a><p>Team Chogchemy<br><span>Built by <a href="https://x.com/0xileri" target="_blank" rel="noopener noreferrer">@0xileri</a> · Artist reference and art direction by <a href="https://x.com/theejhay01" target="_blank" rel="noopener noreferrer">@theejhay01</a><br>AI-generated child artwork and comics · Built for Chogathon</span></p></footer>
+<script type="module" src="/wallet.js"></script><script type="module" src="/fusion.js"></script>
+<script type="module" src="/motion.js"></script>
+</body></html>

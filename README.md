@@ -1,6 +1,6 @@
 # Chogchemy
 
-Create a character from your Chog and another Chog, with optional partner approval, artist style references, and ancestry linked to the original NFTs. Built for Chogathon.
+Make a meme starring your verified Chog NFT. Browse 100 popular templates, create an artist-guided AI scene, add captions and share a saved PNG. The separate family studio still fuses two Chogs into a child, comics and stickers. Built for Chogathon.
 
 Live website: [chogchemy.up.railway.app](https://chogchemy.up.railway.app). Open it in a browser with MetaMask or Rabby to connect your holder wallet.
 
@@ -108,3 +108,15 @@ After saving a child and its first family comic, its original creator can choose
 The original creator of a saved child can make one six-reaction sticker pack without first generating a comic. GM, crying, celebrating, hugs, sleepy and send help use both parent NFT images, the verified saved child, and the approved artist reference. One provider call creates a 2-column, 3-row sheet; Sharp extracts each cell, removes edge-connected white background, adds an outline and deterministic caption, and exports transparent 512px PNGs. A ZIP contains all six images and a readme. SQLite saves all downloads and provenance in one transaction. New sticker requests share the existing holder/global daily limits and concurrency, check both parent owners twice, and can be cancelled before provider dispatch. A dispatched or interrupted provider failure is never automatically repeated. Existing child and comic bytes remain unchanged.
 
 PNG downloads and ZIP bundles do not automatically install stickers into WhatsApp, Telegram or other chat apps; users add them with a supported sticker tool or share the images. Layout, pose and character fidelity depend on the image model. Background extraction preserves enclosed white features, but cannot repair a poorly laid-out or low-quality AI sheet. Synthetic fixture images and ZIPs are explicitly labelled as tests. The deployment installs [fonts-dejavu-core](https://packages.debian.org/bookworm/fonts-dejavu-core) to render sticker captions reliably in the Linux image.
+
+## Chog Memes
+
+The homepage leads with a 100-template Imgflip snapshot; `/families` retains the original family studio. Old `/?fusion=...` links still load that studio. `/api/meme-templates` reads the checked-in catalog without network or generation calls. Original template previews are loaded directly from fixed Imgflip image URLs without a referrer. See [docs/MEME-CATALOG.md](docs/MEME-CATALOG.md) for the source/date and all 100 links; this is an Imgflip popularity snapshot, not a universal ranking or a transfer of template rights.
+
+Meme creation requires an authenticated holder and rechecks the chosen NFT owner immediately before the single provider dispatch. The actual Chog and selected template are the first two image references, followed by the two artist style drawings. The server accepts catalog IDs rather than arbitrary URLs, bounds downloads and decoded image sizes, refuses redirects, and compacts provider copies if needed. Captions (80 characters each) are added locally in top/bottom bars, not the original template caption boxes. An optional role description identifies which character to replace; scene accuracy and pose fidelity still require real-output review.
+
+Memes reuse the existing SQLite record/image storage with an explicit `kind: meme`, are excluded from family endpoints and galleries, and share the global/holder quotas and concurrency queue. A per-wallet request nonce prevents duplicate HTTP submissions from dispatching twice. Preparing requests may be cancelled or retried after preparation errors; dispatched failures remain terminal, counted, and never auto-retried. Saved meme PNGs and public pages are readable without a wallet.
+
+## Website motion
+
+Vanilla browser APIs add one-time scroll reveals, small scroll/hover zoom, button feedback and a scroll progress line. The artwork dialog supports zoom in/out, native Escape dismissal, focus return and small screens. Reduced-motion preferences disable cosmetic motion, including changes made while the page is open. Content remains visible if animations or scripts are unavailable; scrolling uses the browser normally.

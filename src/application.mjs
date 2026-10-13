@@ -5,7 +5,8 @@ import { collection, createChain } from './chain.mjs';
 import { createFusionService, FusionError } from './fusions.mjs';
 import { createMemoryFusionStore } from './fusion-store.mjs';
 import { createChogPreviews } from './chog-previews.mjs';
-import { renderCharacterPage, renderCharacterNotFound } from './character-page.mjs';
+import { renderCharacterPage, renderCharacterNotFound, renderMemePage, renderMemeNotFound } from './character-page.mjs';
+import { memeCatalog } from './meme-catalog.mjs';
 
 const staticFiles = {
   '/watch': ['watch.html', 'text/html'], '/demo-video.mp4': ['chogchemy-demo-v1.mp4', 'video/mp4'],
@@ -14,6 +15,7 @@ const staticFiles = {
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
   '/character.js': ['character.js', 'text/javascript'], '/share.js': ['share.js', 'text/javascript'],
   '/motion.js': ['motion.js', 'text/javascript'], '/motion.css': ['motion.css', 'text/css'],
+  '/memes.js': ['memes.js', 'text/javascript'], '/memes.css': ['memes.css', 'text/css'], '/families': ['families.html', 'text/html'], '/families/': ['families.html', 'text/html'],
   '/brand/chogchemy-logo-v1.png': ['../assets/brand/chogchemy-logo-v1.png', 'image/png'],
   '/brand/chogchemy-icon-v1.png': ['../assets/brand/chogchemy-icon-v1.png', 'image/png'],
   '/brand/chogchemy-banner-v1.png': ['../assets/brand/chogchemy-banner-v1.png', 'image/png'],
@@ -49,6 +51,20 @@ export function createApplication({ chain = createChain(), fusionStore = createM
     try {
       const url = new URL(req.url, appOrigin);
       if (url.pathname === '/healthz' && req.method === 'GET') { send(res, 200, { ok: true }); return; }
+      const memePage = url.pathname.match(/^\/memes\/([a-f0-9]{64})$/);
+      if (memePage && ['GET', 'HEAD'].includes(req.method)) {
+        let request = null;
+        try { request = fusions.getMeme(memePage[1]); } catch (error) { if (!(error instanceof FusionError && error.status === 404)) throw error; }
+        const ready = request?.state === 'generated' && request.artwork;
+        const data = Buffer.from(ready ? renderMemePage(request, appOrigin) : renderMemeNotFound(appOrigin));
+        res.writeHead(ready ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': data.length, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' }); res.end(req.method === 'HEAD' ? undefined : data); return;
+      }
+      const memeImage = url.pathname.match(/^\/meme-artwork\/([a-f0-9]{64})\.png$/);
+      if (memeImage && ['GET', 'HEAD'].includes(req.method)) {
+        const bytes = fusions.memeArtwork(memeImage[1]);
+        if (!bytes) { res.writeHead(404); res.end(); return; }
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': bytes.length, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'public, max-age=31536000, immutable' }); res.end(req.method === 'HEAD' ? undefined : bytes); return;
+      }
       if (url.pathname.startsWith('/characters/') && ['GET', 'HEAD'].includes(req.method)) {
         const match = url.pathname.match(/^\/characters\/([a-f0-9]{64})$/);
         let request = null;
@@ -85,7 +101,7 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         res.end(req.method === 'HEAD' ? undefined : bytes); return;
       }
       if (!url.pathname.startsWith('/api/')) {
-        const file = Object.hasOwn(staticFiles, url.pathname) ? staticFiles[url.pathname] : null;
+        const file = url.pathname === '/' && url.searchParams.has('fusion') ? staticFiles['/families'] : Object.hasOwn(staticFiles, url.pathname) ? staticFiles[url.pathname] : null;
         if (!file || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(404); res.end('Not found'); return; }
         let data = await readFile(new URL(`../public/${file[0]}`, import.meta.url));
         if (file[1] === 'text/html') data = Buffer.from(data.toString('utf8').replaceAll('__APP_ORIGIN__', appOrigin.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')));
@@ -143,9 +159,19 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         res.setHeader('Set-Cookie', cookie(id)); send(res, 200, { address: challenge.address }); return;
       }
       if (req.method === 'GET' && url.pathname === '/api/gallery') { send(res, 200, { artworks: fusions.gallery() }); return; }
+      if (req.method === 'GET' && url.pathname === '/api/meme-templates') { send(res, 200, memeCatalog); return; }
+      if (req.method === 'GET' && url.pathname === '/api/meme-gallery') { send(res, 200, { memes: fusions.memeGallery() }); return; }
+      const memeRoute = url.pathname.match(/^\/api\/memes\/([a-f0-9]{64})(?:\/(generate|cancel))?$/);
+      if (req.method === 'GET' && memeRoute && !memeRoute[2]) { send(res, 200, fusions.getMeme(memeRoute[1], session?.address)); return; }
       const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate|comic|cancel-comic|episode|cancel-episode|stickers|cancel-stickers))?$/);
       if (req.method === 'GET' && fusionRoute && !fusionRoute[2]) { send(res, 200, fusions.get(fusionRoute[1], session?.address)); return; }
       if (!session) { send(res, 401, { error: 'Connect and verify your wallet first.' }); return; }
+      if (url.pathname === '/api/memes' && req.method === 'GET') { send(res, 200, { memes: fusions.listMemes(session.address) }); return; }
+      if (url.pathname === '/api/memes' && req.method === 'POST') { send(res, 202, await fusions.createMeme(session.address, await body(req))); return; }
+      if (memeRoute && req.method === 'POST') {
+        if (memeRoute[2] === 'generate') { send(res, 202, await fusions.generateMeme(memeRoute[1], session.address)); return; }
+        if (memeRoute[2] === 'cancel') { send(res, 200, await fusions.cancelMeme(memeRoute[1], session.address)); return; }
+      }
       if (req.method === 'GET' && url.pathname === '/api/drawing-usage') { send(res, 200, fusions.usage(session.address)); return; }
       if (['GET', 'HEAD'].includes(req.method) && ['/api/chog-preview', '/api/chog-image'].includes(url.pathname)) {
         const tokenId = url.searchParams.get('id');

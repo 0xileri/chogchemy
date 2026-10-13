@@ -1,8 +1,19 @@
 # Test Chogchemy
 
-## Public review — no wallet needed
+## Meme studio — the main experience
 
-1. Open https://chogchemy.up.railway.app. The site explains the three steps: connect, create child, create comic.
+1. Open https://chogchemy.up.railway.app. Browse the 100 templates, search by name and filter by category; this makes no image-generation request.
+2. Connect a Chog holder wallet and choose the NFT to star in the scene. Pick a template and optionally describe the character to replace.
+3. Add optional top/bottom captions. These appear in separate caption bars, not the original template's text boxes. Click **Create my Chog meme** once. One dispatched request uses one of the shared drawing allowance.
+4. Check progress or reopen the request from **My memes**. Cancelling is possible only during preparation; a dispatched provider failure is not automatically repeated.
+5. Open the finished public meme page, download the PNG, and try **Enlarge artwork**, **Zoom in**, **Zoom out**, Escape, and keyboard focus return. The original NFT stays in its wallet.
+6. Ask the artist to check that the actual NFT traits remain recognizable and the template's joke/pose still works. Real meme output quality has not been established by synthetic tests.
+
+Template source and all 100 links are recorded in MEME-CATALOG.md. They are popular on Imgflip, not a universal top-100 ranking.
+
+## Family review — no wallet needed
+
+1. Open https://chogchemy.up.railway.app/families. The family studio explains the three steps: connect, create child, create comic.
 2. Scroll to Explore creations and open the item marked **Comic saved**, from Chogs #1786 and #1870.
 3. Inspect **Your saved Chog child**, the original parent links, and the holder/approval labels.
 4. Scroll to **Your family comic**. Review the wedding, new arrival and picnic. The saved child should remain recognizable in the comic.
@@ -14,7 +25,7 @@ https://chogchemy.up.railway.app/characters/5bf843d9408576096235b23092a73230331f
 
 ## Holder creation flow
 
-Use a browser with MetaMask or Rabby and a wallet that owns a Chog Genesis NFT on Monad mainnet. Do not share wallet keys.
+Open https://chogchemy.up.railway.app/families in a browser with MetaMask or Rabby and a wallet that owns a Chog Genesis NFT on Monad mainnet. Do not share wallet keys.
 
 1. Click **Connect wallet** and sign the login message. Your Chogs are discovered automatically. If discovery fails, use the manual token ID fallback.
 2. Select your first parent and enter a distinct second Chog token ID. Its artwork preview should appear. Token ID means the number at the end of its OpenSea item URL.
