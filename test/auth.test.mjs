@@ -54,6 +54,22 @@ test('wallet address alone cannot access holder APIs', async () => {
   assert.equal(f.calls(), 0);
 });
 
+test('verified wallets behind one proxy have independent request limits', async () => {
+  const f = fixture(), first = await f.login();
+  const challenge = await f.request('/api/auth/challenge', { method: 'POST', data: { address: stranger.address } });
+  const verified = await f.request('/api/auth/verify', { method: 'POST', data: {
+    id: challenge.body.id, signature: await stranger.signMessage({ message: challenge.body.message }),
+  } });
+  assert.equal(verified.status, 200);
+  const secondCookie = verified.headers['set-cookie'].split(';')[0];
+  for (let i = 0; i < 90; i++) assert.equal((await f.request('/api/session', { cookie: first.cookie })).status, 200);
+  assert.equal((await f.request('/api/session', { cookie: first.cookie })).status, 429);
+  assert.equal((await f.request('/api/session', { cookie: secondCookie })).status, 200);
+  assert.equal((await f.request('/api/config')).status, 200);
+  f.advance(60001);
+  assert.equal((await f.request('/api/session', { cookie: first.cookie })).status, 200);
+});
+
 test('drawing allowance is private to the signed-in wallet and resets at the next UTC day', async () => {
   const f = fixture();
   assert.equal((await f.request('/api/drawing-usage')).status, 401);
@@ -149,7 +165,7 @@ test('branding images use binary MIME types and HEAD metadata while source files
   const f = fixture();
   const page = await f.request('/');
   assert.doesNotMatch(page.body, /__APP_ORIGIN__/);
-  assert.match(page.body, /content="http:\/\/localhost:3000\/brand\/chogchemy-banner-v1.png"/);
+  assert.match(page.body, /content="http:\/\/localhost:3000\/brand\/chogchemy-banner-v2.png"/);
   for (const name of ['logo', 'icon', 'banner']) {
     const path = `/brand/chogchemy-${name}-v1.png`, image = await f.request(path);
     assert.equal(image.status, 200); assert.equal(image.headers['content-type'], 'image/png');

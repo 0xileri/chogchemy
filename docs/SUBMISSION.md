@@ -1,106 +1,90 @@
 # Chogchemy — submission draft
 
-## Project and team
-
 Project / team: **Chogchemy**
 
-Builder: **@0xileri** — https://x.com/0xileri
+Builder X and Discord: **@0xileri** — https://x.com/0xileri
 
-Comic artist: **@theejhay01** — https://x.com/theejhay01
+Comic artist X: **@theejhay01** — https://x.com/theejhay01
 
-Builder Discord: **@0xileri**
-
-Artist Discord: **[Add if required by the submission form]**
+Artist Discord and the submission contact email have not been supplied. Confirm the artist's registered teammate profile in the existing application.
 
 Website: https://chogchemy.up.railway.app
 
-Repository: https://github.com/0xileri/chogchemy (currently private; @0xileri plans to make it public when the build is finished, before judge review).
+Public result tour: https://chogchemy.up.railway.app/examples
 
-Demo video: https://chogchemy.up.railway.app/watch
+Chog passport: https://chogchemy.up.railway.app/chogs/1786
 
-The current video shows the recorded family workflow. Record an updated meme walkthrough after reviewing a real Chog meme output; synthetic test artwork should not be presented as a live AI demo.
+Weekly prompt: https://chogchemy.up.railway.app/community
 
-Direct MP4: https://chogchemy.up.railway.app/demo-video.mp4
+Repository: https://github.com/0xileri/chogchemy — private during building. @0xileri plans to make it public when finished; verify judge access before submitting.
 
-The video is a narrated screenshot walkthrough of live pages and saved real results, with synthetic voice narration. Duration: about 2 minutes 52 seconds. It does not present image generation as instant.
+Demo preview: https://chogchemy.up.railway.app/watch
 
-## Project pitch, one line
+Direct download: https://chogchemy.up.railway.app/demo-video.mp4
 
-Chogchemy puts your verified Chog NFT into popular memes, with 100 searchable templates, artist-guided AI scenes, and saved, shareable results.
+**Final demo submission link:** upload the updated MP4 to unlisted YouTube or Google Drive with Anyone with the link / Viewer access. The official submission form accepts those hosts, not the direct website MP4 link. An accepted upload URL is still pending.
+
+## One-line pitch
+
+Chogchemy makes your verified Chog a recurring meme character, with a passport that keeps its creative history as NFT ownership changes.
 
 ## What we built
 
-The main studio is Chog Memes. A holder connects their wallet, chooses their actual Chog NFT, and picks from 100 popular templates in an Imgflip snapshot. The AI receives the specific NFT artwork and chosen template as references, then replaces the scene's main character with that Chog. An optional role description identifies the subject in a crowded scene. Top and bottom captions are drawn locally in separate bars so their spelling stays exact; they do not replace the template's original caption-box layout. PNG downloads, public meme pages, a meme wall, saved requests and a shared drawing allowance are included. Template interpretation and real-output quality still need review; synthetic fixtures test the interface and storage, not artistic quality. Source: https://imgflip.com/api and MEME-CATALOG.md.
+The holder connects a wallet, selects their actual Chog Genesis NFT and chooses a familiar meme scene. Ten recommended formats offer named caption boxes, clear character roles and complete joke suggestions; all 100 source templates remain searchable. Captions are rendered locally in the selected format's positions, with outside bars for other templates. Tab or mobile Space can fill suggestions, while personal text stays intact.
 
-The homepage now leads with memes. The family studio remains available at https://chogchemy.up.railway.app/families, and existing family links continue to work. Scroll reveals, subtle artwork zoom, responsive click feedback, and an accessible enlarged-artwork viewer have reduced-motion support.
+AI receives the exact NFT artwork, the selected meme and two original artist style drawings. A saved result has a PNG download, a public page and its NFT identity. The original creator can change captions and export another PNG without requesting AI again or using drawing allowance. The saved original and its public link keep their original captions and credit.
 
-All 100 templates have two Chog-themed caption ideas (200 pairs). A Suggest captions button cycles the ideas. Tab in an empty caption field fills suggestions while preserving normal focus navigation; Space in an empty field supports phone input, with the button as a fallback. Custom text is preserved. These local suggestions do not request AI generation or consume drawing allowance.
+Each Chog has a public character passport grouping its memes and family appearances. Current ownership is read from Monad. A later verified owner can create a fresh appearance for the same token; earlier creators keep their credits. This is an app scrapbook, not a change to NFT metadata or an on-chain authorship registry.
 
-Chogchemy lets a Chog Genesis holder create a fictional family from two real Chog NFTs. Connect a holder wallet, choose two parents, create their child, then request a three-scene family comic: a wedding, a new arrival, and a family picnic. The comic uses the saved child as a reference so the story builds on the character already created.
+A weekly community prompt provides a recurring creative theme. Participation is explicit and optional. Only completed real memes opted into that prompt appear on its wall; the site reports zero when there are no entries.
 
-The studio uses two original fusion drawings from our collaborating comic artist, @theejhay01, to guide its outlines, color, texture and shading. The second example combines mushrooms with a cap and a green face with skull teeth; it guides how traits can interact when they are present in the selected parents. The model is told to take character features from the actual parents, rather than copy accessories from the artist references. AI generates the final child and comic. Both are saved, downloadable, and viewable on a public family page alongside the two parent NFT links and the recorded approval status. The family creator can also make a six-reaction sticker pack for chats: GM, crying, celebrating, hugs, sleepy and send help. A single image request creates the whole pack, exported as six transparent PNGs and a ZIP. A first comic is not required for stickers.
+The secondary family studio uses two Chog NFTs to create a child, a three-scene comic, three subsequent story choices and chat stickers. Parent previews, optional partner approval, saved artwork and public family pages remain available. The partner's original drawings guide rendering; AI produces the final scenes.
 
-The Chog becomes a recognizable recurring character across meme scenes, family stories and stickers. The artist supplies visual direction, the NFTs supply the characters, and the verified holder supplies the authority to create.
+## Why the NFT matters
 
-## Why the Chog NFT matters
+The NFT supplies a specific recurring character and a stable token identity. The server checks the selected NFT's owner before preparation and immediately before a new AI request. The real studio has no arbitrary image-upload substitute.
 
-A verified Chog Genesis holder wallet unlocks the real studio. For memes, the server checks ownership of the chosen NFT before preparation and again immediately before dispatch. Its actual artwork is the character reference, and the saved meme links to that specific token. There is no arbitrary image-upload alternative. For families, the server checks the two parent NFTs and their owners, uses their artwork to guide the child, and records their token IDs as its roots. The family comic uses those same parents plus the saved child. A changed parent owner prevents a new comic for that family.
+The passport follows the token rather than only the first creator's wallet. When the NFT changes hands, the newly verified holder can continue its character history while earlier authorship remains visible. Without the NFT, there is no authoritative holder to verify or stable transferable character identity for this continuation. Family appearances also retain their actual parent token links.
 
-Take the Chog NFTs out and the holder checks, selection of real characters, and NFT-linked meme and family records stop working. The no-wallet sample lab only demonstrates procedural placeholders; it does not create real Chog memes, families or AI comics.
+Past public artwork stays readable after a sale. Free caption edits belong to the original creation's author and do not grant that person permission to create new AI appearances of a transferred NFT. The app does not transfer copyright or rewrite earlier creator credits.
 
-## Working demo and testing instructions
+## Demonstration and evidence
 
-Start here: https://chogchemy.up.railway.app
+Start with /examples; no wallet is required. It contains two caption exports made from existing real saved AI scenes and the completed family comic. Exports are labelled as examples; they are not new AI requests, creation records or users. The older Bike scene was recovered from its original outside-caption layout and can be softer. Original saved PNGs remain unchanged.
 
-Saved real result from Chogs #1786 and #1870:
-https://chogchemy.up.railway.app/characters/5bf843d9408576096235b23092a73230331f0ca0ea0e2e624f0f8911c8422279
+Original Drake result:
+https://chogchemy.up.railway.app/memes/13e77cc0db67bffe16c5f458449e006251d6640c01076f27a8dce613b7d22f55
 
-Saved comic:
+Original Bike result:
+https://chogchemy.up.railway.app/memes/2b77ada55e1c693682425cbbeaaa70598f5a2a008cfbfc158f73c96086a76d41
+
+Saved family and comic:
 https://chogchemy.up.railway.app/characters/5bf843d9408576096235b23092a73230331f0ca0ea0e2e624f0f8911c8422279#family-comic
 
-No-wallet sample lab: https://chogchemy.up.railway.app/demo
+See JUDGE-GUIDE.md for public and holder testing. The /demo page and local fixture are procedural tests, labelled separately from real AI outputs. The updated video is a narrated screenshot walkthrough of the current build and saved results; it does not portray image generation as instant.
 
-See JUDGE-GUIDE.md for a short public review and the holder flow. The public result needs no wallet and makes no new generation request. New generation uses the configured image provider and drawing allowance.
+## Tech and pre-existing work
 
-## Under the hood
+Plain HTML/CSS/JavaScript, Node.js, persistent SQLite on Railway, viem, Sharp/Pango and Orbio's server-side image API. Chog Genesis runs on Monad mainnet, chain 143, collection 0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763. Coding assistants were used.
 
-- Plain HTML, CSS and JavaScript frontend.
-- Node.js HTTP backend with persistent SQLite storage on Railway.
-- viem for wallet message verification and Monad ownership reads.
-- Chog Genesis on Monad mainnet, chain ID 143.
-- Collection: 0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763.
-- Orbio image API using openai/gpt-image-2, server-side credentials and reference images.
-- Sharp compresses oversized request copies while preserving saved originals.
-- EIP-191 sign-in, optional partner approval, fresh ownership checks, and bounded drawing requests.
+The current official timeline starts 9 October 2026. Git history dates the initial wallet verification, ownership/fusion, image generation, Orbio support, automatic discovery, previews and optional-approval scaffold to **8 October 2026**. That initial work must be disclosed as earlier work, rather than described as entirely created during the event. Branding, public pages, family comics and subsequent features were developed in later commits; the meme, passport, caption-export and weekly-prompt improvements were added on 14 October.
 
-## Pre-existing materials and disclosures
+The Chog collection and parent NFTs already existed. @theejhay01 supplied two hand-drawn style references; their creation dates remain unconfirmed. List them as supplied references and confirm dates before the final submission. Existing libraries, the image model, the dated Imgflip template snapshot, and AI-assisted branding assets are disclosed. See RESEARCH-NOTES.md and MEME-CATALOG.md.
 
-Chog Genesis is an existing collection; the two parents are existing NFTs. @theejhay01 supplied two original hand-drawn fusion references. Existing open-source libraries and the hosted image model provide infrastructure; coding assistants were used during development. The sample lab and automated fixtures generate procedural placeholder images and are labelled separately from real AI artwork. Local fixtures are excluded from deployment.
+Outputs are artwork, not minted NFTs. Records are centralized database records. There is no $CHOG or $CHMY spending integration; $CHOG is optional under the rules, and $CHMY is a different token.
 
-The project was developed during this Chogathon build. Confirm both artist references' creation dates and disclose any work created before the event if applicable.
+## Feedback and next steps
 
-Outputs are artwork records, not minted NFTs. Original NFTs remain in their wallets. Family roots are stored in our database and are not independently attested on-chain. Optional partner approval is labelled honestly; an unsigned partner is not presented as having consented. Existing child approval signatures are not reused as approval for the comic. The project currently has no $CHOG or $CHMY spending integration.
+Builder testing found unclear comic progress, oversized requests, saved-result confusion and misplaced captions. These led to clearer progress/errors, compressed reference copies, saved-work navigation and format-specific caption exports. Two real meme scenes and a completed comic have been reviewed for this build. Their records come from the builder's own usage and do not establish independent users or retention.
 
-## Feedback and usage
+Independent holder feedback, artist approval of the curated set, real-device wallet handoff and output quality across more Chog body types still need review. USER-TEST.md supplies a blank five-minute test and an honest method for recording later return use. Next we will improve layouts using those observations and measure whether weekly prompts and the character passport encourage real repeat use.
 
-Early feedback from the builder's own live testing surfaced three problems: a comic button that appeared unresponsive, an oversized reference request, and confusion about finding saved children versus comics. We improved error messages, reduced oversized request copies, added a visible My creations section, separated the child and comic steps, and displayed the remaining drawing allowance.
+## Final checks requiring the team
 
-The public gallery currently includes a saved child and completed family comic from Chogs #1786 and #1870. A separate earlier child for the same pair is also visible. These records demonstrate successful saving; they are not a count of unique users. Independent holder feedback and retention data are still to be gathered.
+1. Upload the current MP4 to an accepted host and verify its public viewing link.
+2. Confirm artist-reference dates, teammate registration/handles and contact email.
+3. Make the repository accessible to judges when the build is finished, as planned.
+4. Gather real holder/artist feedback; report any missing evidence honestly.
+5. Review the final form and submit from the existing applicant account.
 
-## What's next
-
-Next we will test with more Chog holders, review the generated families with our comic artist, and collect feedback on whether the child clearly inherits traits from both parents and remains recognizable in the comic.
-
-Saved families can now create three more episodes: a first adventure, a first school day, and a birthday surprise. Each story is available once per family, keeps the same parent NFTs and saved child, and uses one additional drawing request. The earlier artwork remains saved. Ownership and quotas are checked again before dispatch. Independent retention data is still to be gathered.
-
-Future work includes more story choices and opt-in collaborations between holders. We will use feedback to test repeat use before expanding the story system.
-
-## Before submitting
-
-- Create and review a real Chog meme, then update the demo video to lead with the meme studio. The existing family walkthrough remains available.
-
-1. Builder Discord is @0xileri. Add the artist's Discord if required, and check that the deployed video URL plays for judges.
-2. When the build is finished, @0xileri will make the repository public. Verify judge access before submitting.
-3. Confirm the pre-existing-work disclosure with both team members.
-4. Sign in to the existing Chogathon application. The registration page checked on 11 October 2026 says registrations are closed, with sign-in available for existing applicants; verify final submission access in that account.
-5. Review and submit the final text in the hackathon dashboard.
+The official page checked on 14 October lists submissions closing **23 October 2026, 15:00 UTC / 16:00 Lagos**. Registration is closed. Source: https://chogathon.chog.xyz/.

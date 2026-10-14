@@ -3,13 +3,14 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export function createMemoryFusionStore() {
-  const records = new Map(), images = new Map(), comics = new Map(), episodes = new Map(), stickers = new Map();
+  const records = new Map(), images = new Map(), comics = new Map(), episodes = new Map(), stickers = new Map(), memeScenes = new Map();
   return {
     get(id) { return records.has(id) ? structuredClone(records.get(id)) : null; },
     put(record) { records.set(record.id, structuredClone(record)); },
     all() { return [...records.values()].map(r => structuredClone(r)); },
-    complete(record, bytes) { records.set(record.id, structuredClone(record)); images.set(record.id, Buffer.from(bytes)); },
+    complete(record, bytes, scene = null) { records.set(record.id, structuredClone(record)); images.set(record.id, Buffer.from(bytes)); if (scene) memeScenes.set(record.id, Buffer.from(scene)); },
     artwork(id) { return images.has(id) ? Buffer.from(images.get(id)) : null; },
+    memeScene(id) { return memeScenes.has(id) ? Buffer.from(memeScenes.get(id)) : null; },
     completeComic(record, bytes) { records.set(record.id, structuredClone(record)); comics.set(record.id, Buffer.from(bytes)); },
     comicArtwork(id) { return comics.has(id) ? Buffer.from(comics.get(id)) : null; },
     completeEpisode(record, episodeId, bytes) { records.set(record.id, structuredClone(record)); episodes.set(record.id + ':' + episodeId, Buffer.from(bytes)); },
@@ -32,7 +33,8 @@ export function createSqliteFusionStore(path) {
     CREATE TABLE IF NOT EXISTS artworks (request_id TEXT PRIMARY KEY REFERENCES fusions(id), bytes BLOB NOT NULL);
     CREATE TABLE IF NOT EXISTS comics (request_id TEXT PRIMARY KEY REFERENCES fusions(id), bytes BLOB NOT NULL);
     CREATE TABLE IF NOT EXISTS family_episodes (request_id TEXT NOT NULL REFERENCES fusions(id), episode_id TEXT NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY(request_id, episode_id));
-    CREATE TABLE IF NOT EXISTS family_stickers (request_id TEXT NOT NULL REFERENCES fusions(id), name TEXT NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY(request_id, name));`);
+    CREATE TABLE IF NOT EXISTS family_stickers (request_id TEXT NOT NULL REFERENCES fusions(id), name TEXT NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY(request_id, name));
+    CREATE TABLE IF NOT EXISTS meme_scenes (request_id TEXT PRIMARY KEY REFERENCES fusions(id), bytes BLOB NOT NULL);`);
   const get = db.prepare('SELECT payload FROM fusions WHERE id = ?');
   const put = db.prepare('INSERT INTO fusions (id, creator, expires, state, payload) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET state=excluded.state, payload=excluded.payload');
   const count = db.prepare("SELECT COUNT(*) AS count FROM fusions WHERE expires > ? AND state IN ('awaiting_approvals', 'approved') AND (? IS NULL OR creator = ?)");
@@ -40,6 +42,8 @@ export function createSqliteFusionStore(path) {
   const all = db.prepare('SELECT payload FROM fusions');
   const image = db.prepare('SELECT bytes FROM artworks WHERE request_id = ?');
   const saveImage = db.prepare('INSERT INTO artworks(request_id, bytes) VALUES (?, ?)');
+  const scene = db.prepare('SELECT bytes FROM meme_scenes WHERE request_id = ?');
+  const saveScene = db.prepare('INSERT INTO meme_scenes(request_id, bytes) VALUES (?, ?)');
   const comicImage = db.prepare('SELECT bytes FROM comics WHERE request_id = ?');
   const saveComic = db.prepare('INSERT INTO comics(request_id, bytes) VALUES (?, ?)');
   const episodeImage = db.prepare('SELECT bytes FROM family_episodes WHERE request_id = ? AND episode_id = ?');
@@ -51,6 +55,7 @@ export function createSqliteFusionStore(path) {
     put(record) { put.run(record.id, record.createdBy, record.expires, record.state, JSON.stringify(record)); },
     all() { return all.all().map(row => JSON.parse(row.payload)); },
     artwork(id) { const row = image.get(id); return row ? Buffer.from(row.bytes) : null; },
+    memeScene(id) { const row = scene.get(id); return row ? Buffer.from(row.bytes) : null; },
     comicArtwork(id) { const row = comicImage.get(id); return row ? Buffer.from(row.bytes) : null; },
     episodeArtwork(id, episodeId) { const row = episodeImage.get(id, episodeId); return row ? Buffer.from(row.bytes) : null; },
     stickerAsset(id, name) { const row = stickerImage.get(id, name); return row ? Buffer.from(row.bytes) : null; },
@@ -69,9 +74,9 @@ export function createSqliteFusionStore(path) {
       try { put.run(record.id, record.createdBy, record.expires, record.state, JSON.stringify(record)); saveComic.run(record.id, bytes); db.exec('COMMIT'); }
       catch (error) { db.exec('ROLLBACK'); throw error; }
     },
-    complete(record, bytes) {
+    complete(record, bytes, rawScene = null) {
       db.exec('BEGIN IMMEDIATE');
-      try { put.run(record.id, record.createdBy, record.expires, record.state, JSON.stringify(record)); saveImage.run(record.id, bytes); db.exec('COMMIT'); }
+      try { put.run(record.id, record.createdBy, record.expires, record.state, JSON.stringify(record)); saveImage.run(record.id, bytes); if (rawScene) saveScene.run(record.id, rawScene); db.exec('COMMIT'); }
       catch (error) { db.exec('ROLLBACK'); throw error; }
     },
     activeCount(address, now) { return count.get(now, address, address).count; },

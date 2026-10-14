@@ -1,3 +1,4 @@
+import { mountWalletBrowserHelp } from './mobile-wallet.js';
 const $ = id => document.getElementById(id);
 let provider = null, address = null, config = null, revision = 0, busy = false;
 const previewCache = new Map();
@@ -15,8 +16,7 @@ async function api(path, body) {
   const data = await response.json();
   if (!response.ok) {
     if (response.status === 401) {
-      clearWallet();
-      status('Your wallet session expired. Connect and sign in again to continue.');
+      expireWalletSession();
     }
     const error = new Error(data.error || 'Request failed. Please retry.');
     error.status = response.status;
@@ -62,7 +62,10 @@ async function connect() {
   busy = true; connectDisabled(true);
   let authenticated = false;
   try {
-    if (!window.ethereum?.request) throw new Error('Open this page in a browser with an Ethereum-compatible wallet extension, such as MetaMask or Rabby.');
+    if (!window.ethereum?.request) {
+      mountWalletBrowserHelp({ document, pageUrl: location.href, hasProvider: false });
+      throw new Error('On your phone, open Chogchemy in your wallet browser using the guide below. On desktop, use a wallet extension such as MetaMask or Rabby.');
+    }
     attachProvider(window.ethereum);
     config ||= await api('/api/config');
     if (location.origin !== config.origin) throw new Error(`Open ${config.origin} to connect your wallet.`);
@@ -122,7 +125,11 @@ async function refreshChogs() {
     }
     if (result.tokenIds?.length === result.limit && BigInt(result.balance) > BigInt(result.limit)) $('balance-status').textContent += ` Showing the first ${result.limit}; look up others by ID.`;
     status(document.body.dataset.studio === 'memes' ? 'Wallet connected. Choose the Chog to star in your meme.' : 'Wallet connected. Choose your Chog as the first parent.');
-    if (result.balance === '1' && result.tokenIds?.length === 1) { $('token-id').value = result.tokenIds[0]; await lookup(); }
+    const requested = new URL(location.href).searchParams.get('chog');
+    if (document.body.dataset.studio === 'memes' && requested && /^(0|[1-9][0-9]{0,77})$/.test(requested)) {
+      // A public history link is a request to look up a token, never proof of ownership.
+      $('token-id').value = requested; await lookup();
+    } else if (result.balance === '1' && result.tokenIds?.length === 1) { $('token-id').value = result.tokenIds[0]; await lookup(); }
   } catch (error) { if (attempt === revision) { $('balance-status').textContent = ''; status(error.message); } }
   finally { $('refresh-chogs').disabled = false; }
 }
@@ -172,8 +179,13 @@ $('refresh-chogs').addEventListener('click', refreshChogs);
 $('lookup-chog').addEventListener('submit', event => { event.preventDefault(); void lookup(); });
 // Start disconnected on every page load; never restore identity from browser storage.
 clearWallet();
+mountWalletBrowserHelp({ document, pageUrl: location.href, hasProvider: Boolean(window.ethereum?.request) });
 
 export { api };
+export function expireWalletSession() {
+  clearWallet();
+  status('Your wallet session expired. Connect and sign in again to continue.');
+}
 export function getWalletAddress() { return address; }
 export async function signWalletMessage(message) {
   if (!address || !provider) throw new Error('Connect and verify your wallet first.');

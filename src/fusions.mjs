@@ -176,7 +176,7 @@ export function createFusionService({ store, chain, origin, now = Date.now, imag
   const stickers = createFamilyStickerService({ store, chain, getRecord, serial, view, checkQuota, fail, artDirection, imageGenerator, loadReference, now, jobs });
   const memes = createMemeService({ store, chain, origin, serial, jobs, checkQuota, fail, artDirection, imageGenerator, loadReference, templateLoader, now });
   return {
-    createMeme: memes.create, getMeme: memes.get, listMemes: memes.list, generateMeme: memes.generate, cancelMeme: memes.cancel, memeArtwork: memes.artwork, memeGallery: memes.gallery,
+    createMeme: memes.create, getMeme: memes.get, listMemes: memes.list, generateMeme: memes.generate, cancelMeme: memes.cancel, memeArtwork: memes.artwork, memeGallery: memes.gallery, recaptionMeme: memes.recaption,
     usage,
     generateComic: comics.generate,
     cancelComic: comics.cancel,

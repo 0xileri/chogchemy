@@ -7,19 +7,30 @@ import { createMemoryFusionStore } from './fusion-store.mjs';
 import { createChogPreviews } from './chog-previews.mjs';
 import { renderCharacterPage, renderCharacterNotFound, renderMemePage, renderMemeNotFound } from './character-page.mjs';
 import { memeCatalog } from './meme-catalog.mjs';
+import { createChogPassportService } from './chog-passport.mjs';
+import { renderChogPassportPage, renderCommunityPromptPage } from './passport-pages.mjs';
 
 const staticFiles = {
-  '/watch': ['watch.html', 'text/html'], '/demo-video.mp4': ['chogchemy-demo-v1.mp4', 'video/mp4'],
+  '/watch': ['watch.html', 'text/html'], '/demo-video.mp4': ['chogchemy-demo-v2.mp4', 'video/mp4'],
+  '/family-demo-video.mp4': ['chogchemy-demo-v1.mp4', 'video/mp4'],
   '/demo': ['demo.html', 'text/html'], '/demo/': ['demo.html', 'text/html'],
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
   '/character.js': ['character.js', 'text/javascript'], '/share.js': ['share.js', 'text/javascript'],
   '/motion.js': ['motion.js', 'text/javascript'], '/motion.css': ['motion.css', 'text/css'],
   '/caption-suggestions.js': ['caption-suggestions.js', 'text/javascript'],
+  '/meme-composer.js': ['meme-composer.js', 'text/javascript'], '/mobile-wallet.js': ['mobile-wallet.js', 'text/javascript'],
+  '/meme-page.js': ['meme-page.js', 'text/javascript'],
+  '/passport.css': ['passport.css', 'text/css'],
+  '/passport.js': ['passport.js', 'text/javascript'],
+  '/examples': ['examples.html', 'text/html'], '/examples/': ['examples.html', 'text/html'], '/examples.css': ['examples.css', 'text/css'],
+  '/examples/drake-caption-export-v1.png': ['examples/drake-caption-export-v1.png', 'image/png'],
+  '/examples/bike-caption-export-v1.png': ['examples/bike-caption-export-v1.png', 'image/png'],
   '/memes.js': ['memes.js', 'text/javascript'], '/memes.css': ['memes.css', 'text/css'], '/families': ['families.html', 'text/html'], '/families/': ['families.html', 'text/html'],
   '/brand/chogchemy-logo-v1.png': ['../assets/brand/chogchemy-logo-v1.png', 'image/png'],
   '/brand/chogchemy-icon-v1.png': ['../assets/brand/chogchemy-icon-v1.png', 'image/png'],
   '/brand/chogchemy-banner-v1.png': ['../assets/brand/chogchemy-banner-v1.png', 'image/png'],
+  '/brand/chogchemy-banner-v2.png': ['../assets/brand/chogchemy-banner-v2.png', 'image/png'],
 };
 const tokenPattern = /^(0|[1-9][0-9]{0,77})$/;
 export function validTokenId(value) { return typeof value === 'string' && tokenPattern.test(value) && BigInt(value) < 2n ** 256n; }
@@ -29,6 +40,11 @@ export function createApplication({ chain = createChain(), fusionStore = createM
   const appOrigin = new URL(origin).origin;
   const fusions = createFusionService({ ...generationOptions, store: fusionStore, chain, origin: appOrigin, now });
   const previews = createChogPreviews({ ...previewOptions, chain, now });
+  const passports = createChogPassportService({ store: fusionStore, chain, origin: appOrigin, now, getPreview: async tokenId => {
+    const preview = await previews.preview(tokenId);
+    const version = new URL(preview.imageUrl, appOrigin).searchParams.get('v');
+    return { ...preview, imageUrl: `/passport-image/${tokenId}?v=${version}` };
+  } });
   const secure = appOrigin.startsWith('https:') ? '; Secure' : '';
   const cookie = (value, age = 1800) => `chogchemy_session=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${age}${secure}`;
   const send = (res, status, body) => {
@@ -48,10 +64,44 @@ export function createApplication({ chain = createChain(), fusionStore = createM
     for await (const chunk of req) { bytes += chunk.length; if (bytes > 4096) throw new Error('Request too large.'); chunks.push(chunk); }
     try { return JSON.parse(Buffer.concat(chunks).toString()); } catch { throw new Error('Invalid JSON.'); }
   }
+  function rateLimit(req, res) {
+    cleanup();
+    const session = getSession(req);
+    // A verified holder has an independent bucket behind shared hosting ingress.
+    // Anonymous requests stay socket-limited; forwarded headers are untrusted.
+    const key = session ? `wallet:${session.address}` : `network:${req.socket.remoteAddress || 'unknown'}`;
+    const rate = limits.get(key) || { count: 0, expires: now() + 60000 };
+    rate.count++; limits.set(key, rate);
+    if (rate.count > 90 || challenges.size > 1000 || sessions.size > 1000) {
+      send(res, 429, { error: 'Too many requests. Try again in a minute.' }); return null;
+    }
+    return { session };
+  }
   const handler = async (req, res) => {
     try {
       const url = new URL(req.url, appOrigin);
       if (url.pathname === '/healthz' && req.method === 'GET') { send(res, 200, { ok: true }); return; }
+      const passportPage = url.pathname.match(/^\/chogs\/(\d+)$/);
+      if (['GET', 'HEAD'].includes(req.method) && (passportPage || url.pathname === '/community')) {
+        if (!rateLimit(req, res)) return;
+        if (passportPage && !validTokenId(passportPage[1])) { send(res, 400, { error: 'Use a valid Chog token ID.' }); return; }
+        const html = passportPage ? renderChogPassportPage(await passports.get(passportPage[1], { resolveLive: false }), appOrigin) : renderCommunityPromptPage(passports.challengeEntries(), appOrigin);
+        const bytes = Buffer.from(html);
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': bytes.length, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin' });
+        res.end(req.method === 'HEAD' ? undefined : bytes); return;
+      }
+      const passportImage = url.pathname.match(/^\/passport-image\/(\d+)$/);
+      if (passportImage && ['GET', 'HEAD'].includes(req.method)) {
+        if (!rateLimit(req, res)) return;
+        const tokenId = passportImage[1], version = url.searchParams.get('v');
+        if (!validTokenId(tokenId) || !/^[a-f0-9]{64}$/.test(version || '')) { send(res, 400, { error: 'Reload the Chog passport artwork.' }); return; }
+        try {
+          const image = await previews.image(tokenId, version);
+          res.writeHead(200, { 'Content-Type': image.mime, 'Content-Length': image.bytes.length, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' });
+          res.end(req.method === 'HEAD' ? undefined : image.bytes);
+        } catch { send(res, 502, { error: 'Original Chog artwork is temporarily unavailable. The saved scrapbook remains readable.' }); }
+        return;
+      }
       const memePage = url.pathname.match(/^\/memes\/([a-f0-9]{64})$/);
       if (memePage && ['GET', 'HEAD'].includes(req.method)) {
         let request = null;
@@ -126,14 +176,10 @@ export function createApplication({ chain = createChain(), fusionStore = createM
         res.writeHead(200, { 'Content-Type': file[1].startsWith('text/') ? `${file[1]}; charset=utf-8` : file[1], 'Content-Length': data.length, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache' });
         res.end(req.method === 'HEAD' ? undefined : data); return;
       }
-      cleanup();
       if (req.headers.origin && req.headers.origin !== appOrigin) { send(res, 403, { error: 'Origin not allowed.' }); return; }
       if (req.method === 'POST' && req.headers.origin !== appOrigin) { send(res, 403, { error: 'Open the app at its configured address to continue.' }); return; }
-      const key = req.socket.remoteAddress || 'unknown';
-      const rate = limits.get(key) || { count: 0, expires: now() + 60000 };
-      rate.count++; limits.set(key, rate);
-      if (rate.count > 90 || challenges.size > 1000 || sessions.size > 1000) { send(res, 429, { error: 'Too many requests. Try again in a minute.' }); return; }
-      const session = getSession(req);
+      const access = rateLimit(req, res); if (!access) return;
+      const { session } = access;
       if (req.method === 'GET' && url.pathname === '/api/config') { send(res, 200, { collection, origin: appOrigin, chain: { chainId: '0x8f', chainName: 'Monad', nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 }, rpcUrls: ['https://rpc.monad.xyz'], blockExplorerUrls: ['https://monadvision.com'] } }); return; }
       if (req.method === 'GET' && url.pathname === '/api/session') { send(res, 200, { address: session?.address || null }); return; }
       if (req.method === 'POST' && url.pathname === '/api/logout') {
@@ -162,7 +208,13 @@ export function createApplication({ chain = createChain(), fusionStore = createM
       if (req.method === 'GET' && url.pathname === '/api/gallery') { send(res, 200, { artworks: fusions.gallery() }); return; }
       if (req.method === 'GET' && url.pathname === '/api/meme-templates') { send(res, 200, memeCatalog); return; }
       if (req.method === 'GET' && url.pathname === '/api/meme-gallery') { send(res, 200, { memes: fusions.memeGallery() }); return; }
-      const memeRoute = url.pathname.match(/^\/api\/memes\/([a-f0-9]{64})(?:\/(generate|cancel))?$/);
+      if (req.method === 'GET' && url.pathname === '/api/community-prompt') { send(res, 200, passports.challengeEntries()); return; }
+      const passportRoute = url.pathname.match(/^\/api\/chogs\/(\d+)\/passport$/);
+      if (req.method === 'GET' && passportRoute) {
+        if (!validTokenId(passportRoute[1])) { send(res, 400, { error: 'Use a valid Chog token ID.' }); return; }
+        send(res, 200, await passports.get(passportRoute[1])); return;
+      }
+      const memeRoute = url.pathname.match(/^\/api\/memes\/([a-f0-9]{64})(?:\/(generate|cancel|recaption))?$/);
       if (req.method === 'GET' && memeRoute && !memeRoute[2]) { send(res, 200, fusions.getMeme(memeRoute[1], session?.address)); return; }
       const fusionRoute = url.pathname.match(/^\/api\/fusions\/([a-f0-9]{64})(?:\/(message|approve|recheck|cancel|generate|comic|cancel-comic|episode|cancel-episode|stickers|cancel-stickers))?$/);
       if (req.method === 'GET' && fusionRoute && !fusionRoute[2]) { send(res, 200, fusions.get(fusionRoute[1], session?.address)); return; }
@@ -170,6 +222,11 @@ export function createApplication({ chain = createChain(), fusionStore = createM
       if (url.pathname === '/api/memes' && req.method === 'GET') { send(res, 200, { memes: fusions.listMemes(session.address) }); return; }
       if (url.pathname === '/api/memes' && req.method === 'POST') { send(res, 202, await fusions.createMeme(session.address, await body(req))); return; }
       if (memeRoute && req.method === 'POST') {
+        if (memeRoute[2] === 'recaption') {
+          const { bytes, source } = await fusions.recaptionMeme(memeRoute[1], session.address, await body(req));
+          res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': bytes.length, 'Content-Disposition': 'attachment; filename="chogchemy-caption-edit.png"', 'Cache-Control': 'no-store', 'X-Chogchemy-Caption-Source': source, 'X-Content-Type-Options': 'nosniff' });
+          res.end(bytes); return;
+        }
         if (memeRoute[2] === 'generate') { send(res, 202, await fusions.generateMeme(memeRoute[1], session.address)); return; }
         if (memeRoute[2] === 'cancel') { send(res, 200, await fusions.cancelMeme(memeRoute[1], session.address)); return; }
       }

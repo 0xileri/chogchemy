@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "coordinateSystem": "Normalized rectangles within the square AI scene; positions follow the source template's panels and label areas.",
+  "templates": {
+    "181913649": {
+      "recommendedOrder": 1,
+      "captionIdeas": [
+        [{ "boxId": "reject", "text": "Answering emails before coffee" }, { "boxId": "approve", "text": "Coffee before literally anything" }],
+        [{ "boxId": "reject", "text": "Making plans in the group chat" }, { "boxId": "approve", "text": "One friend choosing a place for everyone" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/181913649",
+      "roles": [{ "id": "drake", "label": "The reacting character", "description": "Drake, the reacting character in both the rejecting and approving panels" }],
+      "boxes": [
+        { "id": "reject", "label": "No thanks", "x": 0.53, "y": 0.04, "width": 0.44, "height": 0.40, "fontSize": 44 },
+        { "id": "approve", "label": "Yes please", "x": 0.53, "y": 0.55, "width": 0.44, "height": 0.40, "fontSize": 44 }
+      ]
+    },
+    "55311130": {
+      "recommendedOrder": 2,
+      "captionIdeas": [
+        [{ "boxId": "situation", "text": "Five deadlines and three unread messages" }, { "boxId": "reaction", "text": "Me making another cup of tea" }],
+        [{ "boxId": "situation", "text": "The kitchen after I tried a new recipe" }, { "boxId": "reaction", "text": "At least the playlist was good" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/55311130",
+      "roles": [{ "id": "dog", "label": "The calm character", "description": "The dog sitting calmly in the burning room in both panels" }],
+      "boxes": [
+        { "id": "situation", "label": "The situation", "x": 0.03, "y": 0.04, "width": 0.43, "height": 0.19, "fontSize": 40 },
+        { "id": "reaction", "label": "The reaction", "x": 0.54, "y": 0.04, "width": 0.43, "height": 0.19, "fontSize": 40 }
+      ]
+    },
+    "87743020": {
+      "recommendedOrder": 3,
+      "captionIdeas": [
+        [{ "boxId": "button-a", "text": "Go to bed early" }, { "boxId": "button-b", "text": "One more episode" }, { "boxId": "chooser", "text": "Me at 11:59 PM" }],
+        [{ "boxId": "button-a", "text": "Save money" }, { "boxId": "button-b", "text": "Order the food I'm craving" }, { "boxId": "chooser", "text": "My brain when the delivery app opens" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/87743020",
+      "roles": [{ "id": "chooser", "label": "The worried chooser", "description": "The sweating person deciding between the two buttons" }],
+      "boxes": [
+        { "id": "button-a", "label": "First button", "x": 0.04, "y": 0.03, "width": 0.38, "height": 0.18, "fontSize": 34 },
+        { "id": "button-b", "label": "Second button", "x": 0.47, "y": 0.03, "width": 0.38, "height": 0.18, "fontSize": 34 },
+        { "id": "chooser", "label": "Who is choosing?", "x": 0.10, "y": 0.82, "width": 0.80, "height": 0.13, "fontSize": 38 }
+      ]
+    },
+    "155067746": {
+      "recommendedOrder": 4,
+      "captionIdeas": [
+        [{ "boxId": "setup", "text": "I say yes to every weekend plan" }, { "boxId": "reaction", "text": "Now I have no free time" }],
+        [{ "boxId": "setup", "text": "Forgot my umbrella because it looked sunny" }, { "boxId": "reaction", "text": "The weather had other plans" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/155067746",
+      "roles": [{ "id": "pikachu", "label": "The surprised character", "description": "Pikachu, the character with the surprised open-mouth expression" }],
+      "boxes": [
+        { "id": "setup", "label": "What happened", "x": 0.04, "y": 0.03, "width": 0.92, "height": 0.20, "fontSize": 40 },
+        { "id": "reaction", "label": "The surprise", "x": 0.04, "y": 0.78, "width": 0.92, "height": 0.18, "fontSize": 40 }
+      ]
+    },
+    "79132341": {
+      "recommendedOrder": 5,
+      "captionIdeas": [
+        [{ "boxId": "start", "text": "A calm conversation in the group chat" }, { "boxId": "mistake", "text": "Me sending 'we need to talk' with no context" }, { "boxId": "blame", "text": "Why is everyone panicking?" }],
+        [{ "boxId": "start", "text": "I'm going to sleep early tonight" }, { "boxId": "mistake", "text": "I open one tiny video" }, { "boxId": "blame", "text": "Why did the sun come up so fast?" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/79132341",
+      "roles": [{ "id": "cyclist", "label": "The cyclist", "description": "The bicycle rider in all three panels: riding, putting a stick in the wheel, and lying after the fall" }],
+      "boxes": [
+        { "id": "start", "label": "The plan", "x": 0.60, "y": 0.14, "width": 0.35, "height": 0.16, "fontSize": 34 },
+        { "id": "mistake", "label": "The bad decision", "x": 0.73, "y": 0.45, "width": 0.24, "height": 0.12, "fontSize": 32 },
+        { "id": "blame", "label": "Who gets blamed?", "x": 0.03, "y": 0.923, "width": 0.45, "height": 0.055, "fontSize": 28 }
+      ]
+    },
+    "112126428": {
+      "recommendedOrder": 6,
+      "category": "Choices",
+      "captionIdeas": [
+        [{ "boxId": "temptation", "text": "The smell of fresh fries" }, { "boxId": "me", "text": "Me" }, { "boxId": "responsibility", "text": "My meal waiting at home" }],
+        [{ "boxId": "temptation", "text": "Weekend plans" }, { "boxId": "me", "text": "My Chog" }, { "boxId": "responsibility", "text": "The deadline on Monday" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/112126428",
+      "roles": [
+        { "id": "boyfriend", "label": "The distracted person", "description": "The boyfriend in the middle looking back at the passing woman" },
+        { "id": "girlfriend", "label": "The annoyed partner", "description": "The girlfriend on the right reacting to the boyfriend looking away" },
+        { "id": "passerby", "label": "The passing person", "description": "The woman on the left walking past the couple" }
+      ],
+      "boxes": [
+        { "id": "temptation", "label": "The distraction", "x": 0.02, "y": 0.72, "width": 0.30, "height": 0.22, "fontSize": 35 },
+        { "id": "me", "label": "The distracted one", "x": 0.35, "y": 0.72, "width": 0.30, "height": 0.22, "fontSize": 35 },
+        { "id": "responsibility", "label": "Being ignored", "x": 0.68, "y": 0.72, "width": 0.30, "height": 0.22, "fontSize": 35 }
+      ]
+    },
+    "217743513": {
+      "recommendedOrder": 7,
+      "category": "Choices",
+      "captionIdeas": [
+        [{ "boxId": "choice", "text": "Reply to the group chat or draw 25" }, { "boxId": "player", "text": "Me protecting my peace" }],
+        [{ "boxId": "choice", "text": "Share the last slice or draw 25" }, { "boxId": "player", "text": "Apparently I collect cards now" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/217743513",
+      "roles": [{ "id": "player", "label": "The card player", "description": "The person on the right holding a large hand of UNO cards" }],
+      "boxes": [
+        { "id": "choice", "label": "Do this, or draw 25", "x": 0.04, "y": 0.10, "width": 0.44, "height": 0.30, "fontSize": 37 },
+        { "id": "player", "label": "Who is drawing cards?", "x": 0.55, "y": 0.76, "width": 0.41, "height": 0.20, "fontSize": 37 }
+      ]
+    },
+    "322841258": {
+      "recommendedOrder": 8,
+      "category": "Conversations",
+      "captionIdeas": [
+        [{ "boxId": "claim", "text": "I booked us a nice dinner" }, { "boxId": "question", "text": "Somewhere we can afford, right?" }, { "boxId": "silence", "text": "…" }, { "boxId": "realization", "text": "We can afford it, right?" }],
+        [{ "boxId": "claim", "text": "I will be ready in five minutes" }, { "boxId": "question", "text": "You have your shoes on, right?" }, { "boxId": "silence", "text": "I just woke up" }, { "boxId": "realization", "text": "Your shoes are on, right?" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/322841258",
+      "roles": [
+        { "id": "anakin", "label": "The person making the claim", "description": "Anakin, the man on the left in the first and third panels" },
+        { "id": "padme", "label": "The person asking", "description": "Padme, the woman on the right in the second and fourth panels" }
+      ],
+      "boxes": [
+        { "id": "claim", "label": "The claim", "x": 0.03, "y": 0.34, "width": 0.44, "height": 0.13, "fontSize": 31 },
+        { "id": "question", "label": "The hopeful question", "x": 0.53, "y": 0.34, "width": 0.44, "height": 0.13, "fontSize": 31 },
+        { "id": "silence", "label": "The awkward reply", "x": 0.03, "y": 0.84, "width": 0.44, "height": 0.13, "fontSize": 31 },
+        { "id": "realization", "label": "The realization", "x": 0.53, "y": 0.84, "width": 0.44, "height": 0.13, "fontSize": 31 }
+      ]
+    },
+    "131940431": {
+      "recommendedOrder": 9,
+      "captionIdeas": [
+        [{ "boxId": "step-one", "text": "Make a quick grocery list" }, { "boxId": "step-two", "text": "Go in for three things" }, { "boxId": "mistake", "text": "Come home with snacks and no milk" }, { "boxId": "realization", "text": "Come home with snacks and no milk" }],
+        [{ "boxId": "step-one", "text": "Finish one small task" }, { "boxId": "step-two", "text": "Open my laptop" }, { "boxId": "mistake", "text": "Spend 40 minutes choosing music" }, { "boxId": "realization", "text": "Spend 40 minutes choosing music" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/131940431",
+      "roles": [{ "id": "gru", "label": "The planner", "description": "Gru, the presenter in all four panels reacting to his own plan" }],
+      "boxes": [
+        { "id": "step-one", "label": "Plan, step one", "x": 0.24, "y": 0.07, "width": 0.23, "height": 0.33, "fontSize": 28 },
+        { "id": "step-two", "label": "Plan, step two", "x": 0.74, "y": 0.07, "width": 0.23, "height": 0.33, "fontSize": 28 },
+        { "id": "mistake", "label": "The bad step", "x": 0.24, "y": 0.57, "width": 0.23, "height": 0.33, "fontSize": 28 },
+        { "id": "realization", "label": "Wait…", "x": 0.74, "y": 0.57, "width": 0.23, "height": 0.33, "fontSize": 28 }
+      ]
+    },
+    "188390779": {
+      "recommendedOrder": 10,
+      "captionIdeas": [
+        [{ "boxId": "argument", "text": "You said you weren't hungry!" }, { "boxId": "response", "text": "Those are our fries now" }],
+        [{ "boxId": "argument", "text": "Why are you always late?" }, { "boxId": "response", "text": "My Chog needed five more minutes" }]
+      ],
+      "source": "https://imgflip.com/memegenerator/188390779",
+      "roles": [
+        { "id": "cat", "label": "The unimpressed cat", "description": "The white cat on the right sitting at the table" },
+        { "id": "woman", "label": "The person yelling", "description": "The woman on the left pointing and yelling" }
+      ],
+      "boxes": [
+        { "id": "argument", "label": "The accusation", "x": 0.03, "y": 0.04, "width": 0.44, "height": 0.20, "fontSize": 39 },
+        { "id": "response", "label": "The comeback", "x": 0.53, "y": 0.04, "width": 0.44, "height": 0.20, "fontSize": 39 }
+      ]
+    }
+  }
+}

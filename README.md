@@ -1,12 +1,18 @@
 # Chogchemy
 
-Make a meme starring your verified Chog NFT. Browse 100 popular templates, create an artist-guided AI scene, add captions and share a saved PNG. The separate family studio still fuses two Chogs into a child, comics and stickers. Built for Chogathon.
+Make your verified Chog a recurring character in memes, with a passport that keeps its creative history as ownership changes. Families, comics and stickers remain in the separate family studio. Built for Chogathon by [@0xileri](https://x.com/0xileri), with original artist references and art direction from [@theejhay01](https://x.com/theejhay01).
 
-Live website: [chogchemy.up.railway.app](https://chogchemy.up.railway.app). Open it in a browser with MetaMask or Rabby to connect your holder wallet.
+Website: https://chogchemy.up.railway.app
+
+- [Real output tour](https://chogchemy.up.railway.app/examples)
+- [Chog #1786 passport](https://chogchemy.up.railway.app/chogs/1786)
+- [Weekly prompt](https://chogchemy.up.railway.app/community)
+- [Family studio](https://chogchemy.up.railway.app/families)
+- [Demo video preview](https://chogchemy.up.railway.app/watch)
 
 ## Run locally
 
-Use Node 24 (minimum 22.13) for native SQLite support.
+Use Node 24, minimum 22.13 for native SQLite.
 
 ```powershell
 cd "C:\Users\HP\orbio build\chogchemy"
@@ -14,111 +20,81 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Open http://localhost:3000 in a browser with MetaMask or Rabby. For first setup, copy `.env.example` to `.env` without overwriting an existing file. Set `IMAGE_PROVIDER=orbio` and add a fresh `ORBIO_API_KEY` using your local editor to enable image generation, then restart the server. Alternatively, select `IMAGE_PROVIDER=openai` with `OPENAI_API_KEY`. Wallet verification and invitations work without an image API key. Keep credentials out of chat, browser code and Git. The Orbio adapter sends its credential only to Orbio; the direct OpenAI adapter uses a separate key.
+Open http://localhost:3000. PowerShell users should use npm.cmd to avoid npm.ps1 execution-policy restrictions. On macOS/Linux use npm.
 
-`APP_ORIGIN` must exactly match the browser origin. `MONAD_RPC_URL` optionally overrides the public Monad endpoint. Run `npm.cmd run check` and `npm.cmd test` for syntax checks and automated tests. On macOS/Linux, use `npm` instead of `npm.cmd`.
+For first setup, copy .env.example to .env without overwriting an existing file. Set IMAGE_PROVIDER=orbio and ORBIO_API_KEY locally, or use the separate direct OpenAI configuration. Keep keys out of chat, Git and browser code. APP_ORIGIN must match the browser's origin. MONAD_RPC_URL optionally replaces the public RPC. Wallet checks and public browsing do not require an image key.
 
-## What works
+```powershell
+npm.cmd run check
+npm.cmd test
+```
 
-- EIP-191 wallet sign-in, single-use five-minute challenges, and 30-minute HttpOnly sessions. Account/network changes clear the verified UI and log out.
-- Live ownership verification for Chog Genesis on Monad mainnet: chain 143, contract `0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763`.
-- Artwork previews for the selected holder NFT, both parent token inputs, and invitation parents. Entering the partner's token ID loads its artwork automatically; previews do not grant ownership or consent.
-- Immutable 24-hour fusion requests. By default, verified ownership of Parent A allows its holder to create without extra signatures; Parent B's holder can optionally approve. Only the creator can dispatch generation in this mode, and only their holder quota is used. Two distinct NFTs in the same wallet are also supported.
-- Choose **Let the AI choose**, **Face left**, or **Face right** before checking parents. Left/right refer to the viewer's screen. The immutable choice is saved with the family, bound into new holder approval messages, and sent to both image provider adapters. It guides the AI portrait; it does not guarantee visual compliance or flip the finished artwork. Existing requests default to automatic facing without changing their original signed messages. Comics and stickers keep using the saved child design.
-- An optional **Ask the other holder to approve first (optional)** checkbox creates an invitation between distinct holders that requires both signatures. Signatures bind the parent token IDs, holders, origin, chain, request, expiry, and hashed art direction. Existing invitations retain their original two-signature requirement.
-- Server-side AI image editing using both NFT images plus optional artist references, after satisfying the request's approval policy and a fresh check of both owners at the same Monad block. Public ancestry and gallery entries show whether the partner actually signed.
-- One saved PNG per invitation, public ancestry links, downloads and a shared gallery. Consent, provenance and image bytes persist together in SQLite.
-- Public character pages at `/characters/<fusion-id>` for finished artwork, with parent NFT links, historical approval labels, downloads, artwork digest and social preview metadata. Viewing a page needs no wallet. Native sharing is available where supported, with a copy-link fallback; the gallery links to these pages.
-- **Our Chog Family:** after saving a fusion child, the original creator can request one three-panel comic: the wedding, the new arrival, and a family picnic. Both NFT images, the verified saved child, and the artist references supply the image provider's references. Oversized Orbio comic requests use compressed image copies; the original child PNG remains saved unchanged. Comics have their own storage and status, downloads, and a public section on the character page. This is a fictional character story; approvals for the original child are not presented as comic approvals.
-- A dedicated demo at `/demo`, with procedural placeholder art and browser-local history. It requires no wallet, approval checkboxes, or AI calls.
+## The main meme studio
 
-The collection was identified through [Chog's official Linktree](https://linktr.ee/chognft) and [the linked OpenSea collection](https://opensea.io/collection/chog-genesis). Enter the on-chain token ID from the end of the OpenSea item URL; its displayed artwork number can differ. After login, automatic discovery searches the collection using batched on-chain owner reads at one block. The first scan takes a few seconds; a shared 30-second cache reduces repeated RPC work. The range is bounded by maxSupply (capped at 5,000), and the number of successful owner reads must match totalSupply before results are accepted. A changed wallet balance refreshes the cache. If discovery fails, manual lookup remains available. Up to 12 Chogs are shown per wallet; selecting a token always rechecks current ownership.
+Connect a Chog holder wallet, select the NFT, choose a template and create a scene. The server verifies ownership before preparation and immediately before provider dispatch. The actual NFT, the selected scene and two artist drawings become the image references; users cannot substitute arbitrary image URLs.
 
-Detailed timestamps, block numbers and artwork hashes are available under **Record details** in the studio and public character pages.
+The default selection shows ten recommended templates with two to four named caption boxes and readable character roles. All 100 templates in the dated Imgflip snapshot remain searchable. The recommended list is selected for a simple starting point, not a guarantee of AI quality or artist approval. Category overrides and normalized layout geometry live in assets/memes/layouts.json; the original source snapshot remains unchanged. See [catalog provenance](docs/MEME-CATALOG.md).
 
-## Test the fusion flows
+Each recommended template has two complete caption suggestions. Other templates retain two top/bottom ideas. Tab in an empty field fills a suggestion and advances focus normally. Mobile Space/beforeinput and a visible button also work. Cycling and template changes preserve manually edited text.
 
-1. Holder A connects and signs the login message. Their Chogs are found automatically; a sole Chog is selected and shown as Parent A, with **Change Chog** to choose another or use manual lookup. With several, choose one. Enter the other holder's token ID as Parent B.
-2. Leave **Ask the other holder to approve first (optional)** unchecked and click **Check the parents**. Review both NFT images and owners. Holder A can click **Create the child** immediately, with no additional signature. Holder B can use the shared link to **Add my optional approval** before generation; an unsigned partner is labelled clearly. An optional approval does not grant the partner permission to dispatch the creator's generation.
-3. To test the collaboration flow, check **Ask the other holder to approve first (optional)** before preparing a new request. Each holder clicks **Review my approval**, reads the complete message, checks the consent box, and signs. For local testing, use another browser profile on the same computer. Remote sharing requires a hosted HTTPS instance. The policy cannot be changed after creation; create a new request to choose another mode.
-4. In the collaboration flow, either holder clicks **Create the child** once both approvals are saved. Parent images load first; either holder can cancel during preparation in both modes. After dispatch to the provider, generation cannot be cancelled.
-5. Wait a few minutes; status updates automatically. The completed character, both parent links, download and gallery entry appear. You can leave and return to the invitation link later.
-   Use **Open family page** to open its public record, or **Share character** to share that page. A finished character stays visible after the invitation deadline; unfinished or missing characters return a helpful 404.
-6. Restart the server and reopen the link: consent and artwork persist. Wallet login must be repeated to take actions.
+Captions are drawn locally with Sharp/Pango so spelling is exact and glyphs wrap within available pixels. Recommended formats use scene-specific boxes; others use outside bars. Model composition can still differ from the template. The provider is asked to keep caption regions clear.
 
-7. After a child is saved, its original creator can click **Create the family comic**. The server verifies that both parent NFTs still have their recorded owners, then rechecks immediately before dispatch. The saved child's digest is verified and its PNG becomes the third image reference. Preparation can be cancelled; a dispatched comic is never automatically retried. View the finished comic, download it, or share the public family link. Comics remain readable after invitation expiry; no NFT is minted.
+Saved meme PNGs have public pages, sharing, downloads and private My memes navigation. Requests are immutable and idempotent. New provider scenes are saved separately and atomically with their original captioned PNG and provenance.
 
-Without real holders, run `node scripts/preview-test.mjs`, then open http://localhost:3091. This isolated fixture has test wallets A/B, fake tokens 11/22 with original procedural preview art, and a procedural test PNG labelled **TEST ARTWORK**. It makes no real blockchain or AI calls. It verifies application behavior, not AI visual quality. Never deploy it. The test runner explicitly targets `test/*.test.mjs` so it does not start this fixture.
+### Free caption edits
 
-## Artist contribution
+The original creator can export new captions from a saved scene without calling AI or using drawing allowance. POST /api/memes/:id/recaption requires a valid creator session and same-origin request. It returns a PNG rather than creating or replacing a public record. Captions use canonical box IDs and bounded text; the raw scene is not publicly served. Two exports may run concurrently.
 
-The Chogchemy identity kit is in [assets/brand/BRAND-GUIDE.md](assets/brand/BRAND-GUIDE.md): transparent logo and icon, social banner, palette, typography, and copy. Open `assets/brand/brand-preview.html` for the visual overview. The site uses this identity in its header, hero, parent preview accents, studio banner, footer, favicon, and social metadata. Social image/canonical URLs use the configured app origin. Only the three named PNGs are publicly served at `/brand/`; brand source documents remain private. These branding assets are separate from the artist reference drawings used for character generation.
+The original saved PNG, captions, digest and creator credit remain unchanged. A later NFT owner can create a fresh meme but cannot edit someone else's creation. An earlier creator can still export captions for their own saved art after selling the NFT; that does not grant new AI-generation authority.
 
-Art direction version 3 uses two original artist drawings: `assets/artist/comic-fusion-reference-v1.jpg` and `assets/artist/mushroom-skull-fusion-reference-v1.jpg`. Bold black outlines, saturated colors, grainy texture and simple shading guide the output; the selected parent NFTs supply its features. The second example combines mushrooms with a cap, a green face with skull teeth, and a torn hoodie. Its lesson is to combine traits naturally when they occur in the actual parents, rather than copy its accessories into every fusion. Both drawings are hand-drawn style references, separate from the AI gallery. Artist reference and art direction: [@theejhay01](https://x.com/theejhay01). Builder: [@0xileri](https://x.com/0xileri). Team: Chogchemy. Site credits distinguish the original artist contribution from AI-generated results. Oversized Orbio child requests use compressed copies of the references, preserving original digests and the facing choice.
+Legacy uncaptioned images can be reused directly. Older outside-caption images recover their square scene from the known original layout; this can soften it. A notice explains that fallback. Unknown or damaged layouts keep their original downloads but fail free export safely.
 
-Edit `art-direction.json` to refine the rules or add up to four approved PNG/JPEG/WebP drawings in `assets/artist/`, then list their filenames in `references`. Restart after changing it and prepare a new fusion to use the new style.
+## Chog passports and weekly prompts
 
-The style hash covers the rules, version, description and reference image hashes. Existing invitations using a different style cannot generate; create a fresh invitation for new consent. Legacy invitations from before this milestone also need fresh approvals. The Orbio adapter uses its OpenRouter-compatible `/api/v1/images` endpoint with `input_references`, model `openai/gpt-image-2`, one 1024 by 1024 PNG, and medium quality. The model is present in [Orbio's live image catalogue](https://api.orbio.so/api/v1/models?output_modalities=image). The optional direct OpenAI adapter uses its [image edits API](https://developers.openai.com/api/reference/resources/images/methods/edit). Model and quality are configurable per provider. No automatic fallback switches between paid providers. The Orbio request/response contract is covered by mocked tests; live paid generation still needs a fresh locally configured key.
+/chogs/:tokenId groups real saved memes and family appearances by token, rather than creator wallet. It preserves each original creator's credit and links to the actual NFT. Current ownership uses a bounded 30-second cache with a displayed check time; the studio independently checks it again before creating. New verified owners can continue the same character history. This app scrapbook does not alter NFT metadata or transfer copyright.
 
-## Persistence and failures
+Passports exclude procedural fixtures, unknown output modes and foreign collection/origin records. Ownership/RPC failure leaves history readable with an honest unavailable state. Public original-art previews use bounded trusted reference loading; private holder preview endpoints remain authenticated.
 
-`data/chogchemy.sqlite` stores invitations, signatures, PNGs and provenance. Use SQLite's online backup mechanism or stop the app and checkpoint its WAL before copying the database. Never commit it. `DATABASE_PATH` can point to a persistent disk. Sessions and the mutation queue are in memory: run exactly one server process/instance.
+/community displays a weekly UTC prompt and completed real memes explicitly opted into it. The prompt changes Monday at 00:00 UTC. Joining is unchecked by default; URL parameters never silently enter a creation. Old entries stay in their token history. Empty weeks show zero, without fabricated votes, winners or engagement.
 
-Generation follows `approved → preparing → generating → generated`. Reference-loading errors return to `approved` and can be retried without an AI call. After dispatch, any provider timeout/error becomes `generation_failed` and is never automatically retried because it may have been charged. On restart, interrupted preparation returns to approved; an interrupted provider call becomes failed. A new invitation permits another attempt, subject to quotas.
+The /examples tour uses two real saved AI scenes with local caption-export examples and a saved family comic. Exports are labelled and do not count as additional generations, creations or users.
 
-Defaults allow 10 dispatched attempts globally and two per accountable holder per UTC day: the creator in optional approval mode, or both participants when two signatures are required. Each family comic consumes one attempt for the original creator, using the same global limit and concurrency pool as fusions. Referencing another holder's Chog in optional mode does not consume their quota. At most two jobs can prepare/generate concurrently. Failed provider attempts also count. Quotas persist across restarts. These cap request counts, not dollars; configure a provider spending budget separately.
+## Families
 
-Only HTTPS IPFS paths on explicitly trusted gateway hosts are fetched server-side, with every redirect checked. Metadata is capped at 1 MB, references at 12 MB each, and output at 25 MB. Authenticated artwork previews use the same server-side loader and trusted gateway fallback, avoiding browser CORS failures. The preview cache lasts five minutes and is bounded to 40 entries/64 MB, with at most four loads in progress. Token input changes clear stale artwork immediately and load after a short debounce. A preview failure leaves ownership and invitation checks available.
+/families retains the original flow and old /?fusion= links continue to work. A verified Parent A holder selects a distinct Parent B, previews both and chooses automatic, left or right facing. Partner approval remains optional by default. A separate optional invitation policy can require both distinct holders to sign a policy-bound message.
 
-Orbio requests have an additional conservative 4 MB combined JSON limit, checked before dispatch or quota reservation. Oversized family-comic references are resized without cropping to at most 1024 pixels per side and encoded as JPEG copies (768 pixels if still needed). Originals, reference order and the saved child's digest are preserved. Compression is bounded to 16 megapixels per image and runs sequentially to limit decoded memory. Failed preparation does not dispatch a paid call. Use small artist reference files. The adapter uses ordinary image inference; Orbio's Incognito encrypted mode currently supports text only and cannot serve this image flow. The app never changes account privacy settings. See [Orbio's setup guide](https://www.orbio.so/incognito/setup.md).
+AI uses both actual parent images and the artist references to draw a saved child. Its original creator can request a first three-panel comic, then adventure, school or birthday episodes, or a six-reaction sticker pack. These are separate drawing requests. New family drawings check that recorded parent ownership has not changed; saved results remain historical public records after transfers.
 
-## Limitations
+Sticker exports include six transparent PNGs and a ZIP. Users import them with their chat app's supported tool; the ZIP does not install automatically. Layout and character fidelity still depend on the image model.
 
-Original NFTs stay in their holders' wallets. There is no token spending, minting, burn or transfer. Descendants are artwork records with database ancestry, not new NFTs or on-chain ancestry. Smart-contract wallets/EIP-1271 are not supported yet.
+## Wallets, storage and generation safety
 
-The first family episode uses one square PNG with three horizontal panels. The website supplies chapter titles; the AI is instructed to draw without lettering. The saved child is provided as a visual reference, but exact visual consistency and panel composition still depend on the model. A comic is a separate creator-authorized request, using the artist style active when it is requested; completed child artwork is preserved. New comics require unchanged ownership of both recorded parent NFTs. A failed comic leaves the original character available. Interrupted preparation is retryable, while an interrupted dispatched comic is terminal because it may have been charged.
+Chog Genesis on Monad mainnet: chain 143, collection 0xc96d31f8626c6d03fae5dcd3d61e3fb9f4a73763. Selection always checks the on-chain token ID, which can differ from a displayed artwork number. Automatic discovery is bounded to 5,000 candidates and returns up to 12 Chogs, with manual lookup as a fallback.
 
-Ownership is checked at invitation creation, approval preparation/acceptance, rechecks, generation requests, and immediately before the provider call. Detected transfers permanently invalidate consent. Transfers away and back between checks are not detected without event tracking. Finished artwork remains a historical record after later transfers or invitation expiry.
+Sign-in uses single-use five-minute EIP-191 challenges and 30-minute HttpOnly sessions. Account/network/session changes clear author actions and stale caption exports. Desktop wallets need an injected provider; phones can use a wallet browser through the explicit MetaMask deep link. Real-device handoff still needs a holder test. Smart-contract wallet/EIP-1271 sign-in is unsupported.
 
-Image bytes can be checked against their SHA-256 digest, but the server/database are trusted; lineage is not independently attested on-chain. AI visual quality and live paid generation still require testing with a configured account and real parent references.
+SQLite stores records, original artwork, raw meme scenes, comics, episodes and stickers. DATABASE_PATH must point to persistent storage. New tables preserve older records. Use SQLite's online backup or stop/checkpoint the WAL before copying; never commit the database. Sessions and the mutation queue are in memory, so run one process/replica.
 
-## Hosting and team
+Generation is approved → preparing → generating → generated. Preparation can be cancelled or retried. Potentially charged dispatch failures are terminal and never automatically retried or switched to another provider. Restart recovery follows the same rule. References are restricted to trusted hosts, redirects and image sizes are checked, and oversized Orbio requests use compressed copies without changing saved originals.
 
-See [DEPLOY.md](DEPLOY.md) for the live Railway deployment, verification and budget notes. The existing `Dockerfile` also supports Render using `render.yaml`. Both need one web service with persistent storage and `/healthz`. The Railway volume starts with no local artwork or invitations; wallet sessions must be renewed after deployments.
+Memes and family drawings share quotas and a two-job concurrency pool. Live limits are currently four dispatched attempts per accountable holder and ten globally per UTC day; development defaults are two and ten. Failed dispatched attempts count. These are request limits, not a dollar budget. Free caption exports are separate and do not count. Verified wallets have independent API rate buckets behind shared ingress; arbitrary forwarded headers are not trusted.
 
-- Developer: wallet and ownership checks, consent, image integration, persistence and hosting.
-- Comic artist: original style guide, approved reference drawings, sample fusions and output review.
+Orbio uses server-side credentials, model openai/gpt-image-2, one square PNG and medium quality. The direct OpenAI adapter uses a separate key. See [deployment notes](DEPLOY.md) and [implementation research](docs/RESEARCH-NOTES.md).
 
-For submission, gather real holder feedback, record a demo under three minutes, and disclose sample/test fixtures and any pre-existing work.
+## Art direction and motion
 
-Submission text, judge instructions, and the demo recording script are in [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/JUDGE-GUIDE.md](docs/JUDGE-GUIDE.md), and [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md).
+Art direction v3 uses two original drawings in assets/artist. Their outlines, colors and texture guide rendering; the selected NFT images supply the characters. Models are told not to copy unrelated accessories from the style references. The style hash includes rules and reference digests; changed direction requires a fresh request.
 
-## Clear creation flow
+The brand kit retains the original logo and family banner. The meme banner v2 says “Your Chog. Every meme.” and is documented in [BANNER-V2.md](assets/brand/BANNER-V2.md). AI branding assets are separate from the partner's hand-drawn references.
 
-The homepage explains three steps: connect a holder wallet, check two parents and create their child, then request a separate family comic. My creations is visible in the navigation and restores saved work after wallet verification. Status labels distinguish a saved child from a saved comic; opening a creation hides the new-parent form until Start a new family is selected. Child results include a direct link to the comic step. The private drawing-usage API supplies actual configured limits, remaining dispatched attempts and the next UTC reset; the UI displays the reset in the visitor's local time. Deployment limits remain configurable in Railway (currently 4 per holder and 10 globally); development defaults remain 2 and 10.
+Motion uses native browser APIs for reveals, subtle zoom, click feedback and artwork dialogs. Content remains visible if scripts fail. Reduced-motion preferences disable decorative effects; enlarged artwork supports Escape, focus return and small screens.
 
-The narrated saved-family walkthrough is available at [/watch](https://chogchemy.up.railway.app/watch), with a direct MP4 at /demo-video.mp4. It uses screenshots of live pages and saved real artwork with synthetic narration, lasts about 2:52, and does not claim instant generation. The MP4 route supports single byte ranges for browser seeking.
+## Tests, disclosures and limits
 
-## More family episodes
+For an isolated synthetic browser test, explicitly run node scripts/preview-test.mjs and open localhost:3091. Its ephemeral accounts and procedural images are clearly labelled. It makes no real chain or image-provider calls and is excluded from deployment. The /demo page is also procedural; neither proves AI quality.
 
-After saving a child and its first family comic, its original creator can choose three follow-up stories: adventure, school, and birthday. One episode per story per family is saved separately in SQLite, with public episode downloads and anchors on the family page. The same parent NFTs and digest-verified child provide the references. New episodes check both recorded owners twice and share existing daily quotas and concurrency. Preparing requests can be cancelled; provider failures and interrupted dispatched calls cannot be retried. A cancelled or failed pre-dispatch preparation can be retried without losing earlier work. A preparation identifier prevents older cancelled work from changing a replacement request.
+NFTs are not minted, burned, transferred or spent. Artwork/history is stored in a trusted application database, not independently attested on-chain. There is no $CHOG or $CHMY integration.
 
-## Family sticker packs
+Git history dates the initial scaffold to 8 October 2026, before the current official 9 October start. The submission discloses that earlier work. Artist-reference creation dates remain unconfirmed. Existing collection/template/model/library assets and coding assistance are disclosed. Independent holder feedback, artist review and repeat-use evidence are still to be gathered honestly.
 
-The original creator of a saved child can make one six-reaction sticker pack without first generating a comic. GM, crying, celebrating, hugs, sleepy and send help use both parent NFT images, the verified saved child, and the approved artist reference. One provider call creates a 2-column, 3-row sheet; Sharp extracts each cell, removes edge-connected white background, adds an outline and deterministic caption, and exports transparent 512px PNGs. A ZIP contains all six images and a readme. SQLite saves all downloads and provenance in one transaction. New sticker requests share the existing holder/global daily limits and concurrency, check both parent owners twice, and can be cancelled before provider dispatch. A dispatched or interrupted provider failure is never automatically repeated. Existing child and comic bytes remain unchanged.
-
-PNG downloads and ZIP bundles do not automatically install stickers into WhatsApp, Telegram or other chat apps; users add them with a supported sticker tool or share the images. Layout, pose and character fidelity depend on the image model. Background extraction preserves enclosed white features, but cannot repair a poorly laid-out or low-quality AI sheet. Synthetic fixture images and ZIPs are explicitly labelled as tests. The deployment installs [fonts-dejavu-core](https://packages.debian.org/bookworm/fonts-dejavu-core) to render sticker captions reliably in the Linux image.
-
-## Chog Memes
-
-The homepage leads with a 100-template Imgflip snapshot; `/families` retains the original family studio. Old `/?fusion=...` links still load that studio. `/api/meme-templates` reads the checked-in catalog without network or generation calls. Original template previews are loaded directly from fixed Imgflip image URLs without a referrer. See [docs/MEME-CATALOG.md](docs/MEME-CATALOG.md) for the source/date and all 100 links; this is an Imgflip popularity snapshot, not a universal ranking or a transfer of template rights.
-
-Meme creation requires an authenticated holder and rechecks the chosen NFT owner immediately before the single provider dispatch. The actual Chog and selected template are the first two image references, followed by the two artist style drawings. The server accepts catalog IDs rather than arbitrary URLs, bounds downloads and decoded image sizes, refuses redirects, and compacts provider copies if needed. Captions (80 characters each) are added locally in top/bottom bars, not the original template caption boxes. An optional role description identifies which character to replace; scene accuracy and pose fidelity still require real-output review.
-
-Memes reuse the existing SQLite record/image storage with an explicit `kind: meme`, are excluded from family endpoints and galleries, and share the global/holder quotas and concurrency queue. A per-wallet request nonce prevents duplicate HTTP submissions from dispatching twice. Preparing requests may be cancelled or retried after preparation errors; dispatched failures remain terminal, counted, and never auto-retried. Saved meme PNGs and public pages are readable without a wallet.
-
-## Website motion
-
-Caption ideas are in `assets/memes/caption-ideas.json`: two original top/bottom pairs for each of the 100 catalog templates, validated against the server's 80-character limits. The catalog API includes those ideas. The client uses `caption-suggestions.js` to fill empty fields with Tab or Space and cycle unchanged automatic text using **Suggest captions**. Mobile `beforeinput` without `keydown` is supported; keyboard composition, ordinary spaces in existing text, Shift+Tab and modified keys stay native. Tab still advances focus. Changing templates resets only old automatic captions, while custom captions stay intact. Suggestions need no wallet or paid request; editing them invalidates the draft request nonce.
-
-Vanilla browser APIs add one-time scroll reveals, small scroll/hover zoom, button feedback and a scroll progress line. The artwork dialog supports zoom in/out, native Escape dismissal, focus return and small screens. Reduced-motion preferences disable cosmetic motion, including changes made while the page is open. Content remains visible if animations or scripts are unavailable; scrolling uses the browser normally.
+Submission materials: [draft](docs/SUBMISSION.md), [judge guide](docs/JUDGE-GUIDE.md), [video script](docs/DEMO-SCRIPT.md), [holder test](docs/USER-TEST.md). The final competition video must use YouTube or Google Drive; the website MP4 is a preview/download, not an accepted submission host.

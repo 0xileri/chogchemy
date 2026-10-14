@@ -14,7 +14,8 @@ function event(type, data = {}) { return Object.assign({ type, defaultPrevented:
 function fixture() {
   const top = element(), bottom = element(), button = element(), status = element(); let changes = 0;
   const controller = attachCaptionSuggestions({ top, bottom, button, status, onChange: () => changes++ });
-  const template = memeCatalog.templates[0]; controller.select(template);
+  // Exercise the classic two-bar contract separately from curated slot layouts.
+  const template = memeCatalog.templates.find(template => !template.layout); controller.select(template);
   return { top, bottom, button, status, controller, template, changes: () => changes };
 }
 test('every one of the 100 templates has two different caption pairs within the server limits', () => {
@@ -58,8 +59,9 @@ test('button cycles both ideas and returns to the first without creating any oth
 test('changing template clears only old automatic captions and preserves edited captions', () => {
   const f = fixture(); f.button.dispatchEvent(event('click')); f.top.value = 'Keep my own caption'; f.top.dispatchEvent(new Event('input'));
   const next = memeCatalog.templates.find(t => t.name === 'This Is Fine'); f.controller.select(next);
-  assert.equal(f.top.value, 'Keep my own caption'); assert.equal(f.bottom.value, ''); assert.equal(f.bottom.placeholder, next.captionSuggestions[0].bottom);
-  f.bottom.dispatchEvent(event('keydown', { key: 'Tab' })); assert.equal(f.top.value, 'Keep my own caption'); assert.equal(f.bottom.value, next.captionSuggestions[0].bottom);
+  const expectedBottom = next.slotCaptionSuggestions[0].find(caption => caption.boxId === next.captionSlots[1].id).text;
+  assert.equal(f.top.value, 'Keep my own caption'); assert.equal(f.bottom.value, ''); assert.equal(f.bottom.placeholder, expectedBottom);
+  f.bottom.dispatchEvent(event('keydown', { key: 'Tab' })); assert.equal(f.top.value, 'Keep my own caption'); assert.equal(f.bottom.value, expectedBottom);
 });
 test('disabled drawing controls do not change a pending request’s captions', () => {
   const f = fixture(); f.button.disabled = true;
@@ -76,4 +78,25 @@ test('Shift+Tab, modified keys, composition and non-space mobile typing stay nat
     const mobile = event('beforeinput', options); f.top.dispatchEvent(mobile); assert.equal(mobile.defaultPrevented, false);
   }
   assert.equal(f.top.value, ''); assert.equal(f.changes(), 1);
+});
+
+test('curated four-slot ideas fill every visible caption and preserve a manually edited third slot', () => {
+  const fields = Array.from({ length: 4 }, element), button = element(), status = element();
+  const controller = attachCaptionSuggestions({ top: fields[0], bottom: fields[1], fields, button, status });
+  const slots = ['a', 'b', 'c', 'd'].map(id => ({ id, label: id }));
+  const template = { id: 'four', name: 'Four panels', captionSlots: slots, slotCaptionSuggestions: [slots.map(slot => ({ boxId: slot.id, text: `First ${slot.id}` })), slots.map(slot => ({ boxId: slot.id, text: `Second ${slot.id}` }))] };
+  controller.select(template); fields[3].dispatchEvent(event('keydown', { key: 'Tab' }));
+  assert.deepEqual(fields.map(field => field.value), ['First a', 'First b', 'First c', 'First d']);
+  fields[2].value = 'My own third panel'; fields[2].dispatchEvent(new Event('input'));
+  button.dispatchEvent(event('click'));
+  assert.deepEqual(fields.map(field => field.value), ['Second a', 'Second b', 'My own third panel', 'Second d']);
+  controller.select({ id: 'other', name: 'Classic', captionSuggestions: [{ top: 'Top', bottom: 'Bottom' }] });
+  assert.deepEqual(fields.map(field => field.value), ['', '', 'My own third panel', '']);
+});
+test('a hidden extra slot cannot trigger caption replacement in a two-slot template', () => {
+  const fields = Array.from({ length: 4 }, element), button = element(), status = element();
+  const controller = attachCaptionSuggestions({ top: fields[0], bottom: fields[1], fields, button, status });
+  controller.select({ id: 'classic', name: 'Classic', captionSuggestions: [{ top: 'One', bottom: 'Two' }] });
+  const key = event('keydown', { key: ' ' }); fields[3].dispatchEvent(key);
+  assert.equal(key.defaultPrevented, false); assert.deepEqual(fields.map(field => field.value), ['', '', '', '']);
 });

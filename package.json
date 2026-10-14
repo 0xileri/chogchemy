@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Artist-guided Chog fusion with holder-approved ancestry.",
+  "description": "Verified Chog characters for memes, passports and family stories.",
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check src/application.mjs && node --check src/chain.mjs && node --check src/fusions.mjs && node --check src/fusion-store.mjs && node --check public/app.js && node --check public/wallet.js && node --check public/fusion.js && node --check public/character.js && node --check public/share.js && node --check src/character-page.mjs && node --check src/art-direction.mjs && node --check src/reference-assets.mjs && node --check src/image-generator.mjs && node --check src/owner-discovery.mjs && node --check src/chog-previews.mjs && node --check src/family-comics.mjs && node --check src/family-episodes.mjs && node --check src/family-stickers.mjs && node --check src/sticker-assets.mjs && node --check public/motion.js && node --check public/memes.js && node --check src/memes.mjs && node --check src/meme-catalog.mjs && node --check public/caption-suggestions.js",
+    "check": "node --check server.mjs && node --check src/application.mjs && node --check src/chain.mjs && node --check src/fusions.mjs && node --check src/fusion-store.mjs && node --check public/app.js && node --check public/wallet.js && node --check public/fusion.js && node --check public/character.js && node --check public/share.js && node --check src/character-page.mjs && node --check src/art-direction.mjs && node --check src/reference-assets.mjs && node --check src/image-generator.mjs && node --check src/owner-discovery.mjs && node --check src/chog-previews.mjs && node --check src/family-comics.mjs && node --check src/family-episodes.mjs && node --check src/family-stickers.mjs && node --check src/sticker-assets.mjs && node --check public/motion.js && node --check public/memes.js && node --check src/memes.mjs && node --check src/meme-catalog.mjs && node --check public/caption-suggestions.js && node --check src/chog-passport.mjs && node --check src/community-prompts.mjs && node --check src/passport-pages.mjs && node --check public/meme-composer.js && node --check public/mobile-wallet.js && node --check public/meme-page.js && node --check public/passport.js",
     "test": "node --test test/*.test.mjs"
   },
   "engines": {
