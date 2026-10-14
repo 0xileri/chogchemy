@@ -11,7 +11,8 @@ import { createChogPassportService } from './chog-passport.mjs';
 import { renderChogPassportPage, renderCommunityPromptPage } from './passport-pages.mjs';
 
 const staticFiles = {
-  '/watch': ['watch.html', 'text/html'], '/demo-video.mp4': ['chogchemy-demo-v2.mp4', 'video/mp4'],
+  '/watch': ['watch.html', 'text/html'], '/demo-video.mp4': ['chogchemy-demo-v3.mp4', 'video/mp4'],
+  '/extended-demo-video.mp4': ['chogchemy-demo-v2.mp4', 'video/mp4'],
   '/family-demo-video.mp4': ['chogchemy-demo-v1.mp4', 'video/mp4'],
   '/demo': ['demo.html', 'text/html'], '/demo/': ['demo.html', 'text/html'],
   '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
