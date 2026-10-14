@@ -6,7 +6,7 @@ Builder X and Discord: **@0xileri** — https://x.com/0xileri
 
 Comic artist X: **@theejhay01** — https://x.com/theejhay01
 
-Artist Discord and the submission contact email have not been supplied. Confirm the artist's registered teammate profile in the existing application.
+Confirm the artist's Discord and registered teammate profile in the existing application. The submission contact email was supplied privately and is kept outside this repository for the organizer-only field.
 
 Website: https://chogchemy.up.railway.app
 
@@ -61,7 +61,7 @@ https://chogchemy.up.railway.app/memes/2b77ada55e1c693682425cbbeaaa70598f5a2a008
 Saved family and comic:
 https://chogchemy.up.railway.app/characters/5bf843d9408576096235b23092a73230331f0ca0ea0e2e624f0f8911c8422279#family-comic
 
-See JUDGE-GUIDE.md for public and holder testing. The /demo page and local fixture are procedural tests, labelled separately from real AI outputs. The updated video is a narrated screenshot walkthrough of the current build and saved results; it does not portray image generation as instant.
+See JUDGE-GUIDE.md for public and holder testing. The /demo page and local fixture are procedural tests, labelled separately from real AI outputs. The updated video records actual browser interactions—template search, caption typing, artwork viewing, downloading, copying a public link and opening the passport—with synthetic narration using the Cillian preset from Higgsfield. Holder sign-in and a new AI drawing are not recorded. A labelled cut opens an existing real Drake result, a different saved example from the Two Buttons draft; it does not portray that draft as having generated the shown result.
 
 ## Tech and pre-existing work
 

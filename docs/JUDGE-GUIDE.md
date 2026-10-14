@@ -7,7 +7,7 @@
 3. Open an original meme page. Download the PNG, enlarge it, try zoom/Escape, and copy its public link. Reopening needs no wallet.
 4. Open https://chogchemy.up.railway.app/community. Read this week's prompt and its actual entry count. No completed opted-in entries means an honest empty wall.
 5. On the homepage, browse ten recommended scenes, switch to all 100 and search. Pick Anakin/Padme or Gru to see four named caption fields. Tab in an empty field fills the complete suggestion and still advances focus. Space or the button also works; changing suggestions preserves edited text.
-6. Watch https://chogchemy.up.railway.app/watch. The video uses current pages and saved real outputs with synthetic narration; it does not show a live AI drawing in real time.
+6. Watch https://chogchemy.up.railway.app/watch. The video records actual website interactions with synthetic narration using the Cillian preset from Higgsfield. After editing a Two Buttons draft, a labelled cut opens an existing real Drake result as a different saved example. Holder sign-in and a fresh AI drawing are not recorded.
 
 ## Holder creation and free caption export
 

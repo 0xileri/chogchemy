@@ -1,16 +1,20 @@
-# Chogchemy — current demo recording
+# Chogchemy — current recorded website demo
 
-Use eight short scenes and finish within two minutes. Synthetic narration must be disclosed. Show the current website and saved real results; do not present a fixture generation, a caption export or a screenshot time cut as a fresh live AI request. The current voiceover is about 210 words, told in plain English.
+The current demo is under two minutes, with real browser interactions and the user-selected **Cillian preset voice generated through Higgsfield Seed Audio**. It replaces the earlier narrated screenshot slideshow.
 
-1. **The finished joke:** /examples. Lead with the captioned Drake scene; make the product understandable before explaining the tools.
-2. **Choose your Chog:** explain connecting its holder wallet, choosing the actual NFT and picking a familiar meme. The NFT stays in its wallet.
-3. **Make the joke yours:** select a template and fill complete caption suggestions. Explain free edits after saving. This view may be signed out; do not fake holder authentication.
-4. **A saved result:** original public Drake or Bike page. Explain saving, sharing and changing the punchline without drawing again. Generation takes longer than this saved-results walkthrough.
-5. **The real Chog:** /chogs/1786. Show the original NFT, ownership snapshot and saved appearances. Explain that a later verified owner can continue the token's character, while earlier creator credits remain.
-6. **Return next week:** /community. Show the actual theme and actual count, including zero if empty. Participation is optional; do not fabricate votes, winners or engagement.
-7. **The family universe:** saved real family comic, briefly. Explain the artist's hand-drawn references versus AI scenes, optional approval and artwork rather than minted NFTs.
-8. **The invitation:** end with “Your Chog, with a story beyond the profile picture,” the website and builder/artist handles. Keep earlier scaffold and other technical disclosures accurate in the submission materials.
+1. Open the real meme studio homepage.
+2. Show the holder-wallet explanation. Sign-in is not performed in this recording.
+3. Search for Two Buttons, choose the template and show the worried-chooser role.
+4. Click Suggest captions, then type a custom first caption. These are real form interactions on the production website.
+5. Move to the public gallery and open an existing real Drake result. This is a different saved example, not a generated result of the Two Buttons draft. The edit labels this cut and skips a new drawing.
+6. Use the actual enlarge control, download the PNG and copy its public link. The original creator's free caption exports are explained, not impersonated or shown as an authenticated action.
+7. Open the token passport, browse its saved appearances and expand an original creator credit. Actual ownership and metadata load independently of the history.
+8. Visit the weekly prompt, family studio and saved family comic, then return to the homepage.
 
-Capture at a consistent desktop viewport, with no wallet popups, personal account data or credentials in view. Captions and narration should explain the screenshots clearly. Local preview screenshots must use the same current application code and real saved data, and their origin must be described honestly.
+Browser captures are timestamped actual website pixels, with real search, typing, scroll, click, download and copy actions. The added cursor highlight follows the recorded UI targets and clicks; it is an editing enhancement, not a claim of native hardware cursor tracking. Timing is edited to narration, with cuts between views. No UI states, wallet approvals, generation progress or new artworks are invented.
 
-The MP4 preview is /watch and /demo-video.mp4. For the actual Chogathon submission, upload the final MP4 to unlisted YouTube or Google Drive with Anyone with the link / Viewer access; provide that viewing URL. The website's direct MP4 URL is not an accepted form host.
+The AI voiceover uses the selected Cillian preset, not a clone of the builder's voice. Quiet gaps were inserted at detected pauses for action pacing, preserving the original speech speed. Paragraph cue assignments are timing-based estimates, not word-accurate ASR or subtitle timings.
+
+The current preview is /watch and /demo-video.mp4. Earlier videos remain archived at /slideshow-demo-video.mp4, /extended-demo-video.mp4 and /family-demo-video.mp4.
+
+For the Chogathon form, upload the final MP4 to unlisted YouTube or Google Drive with Anyone with the link / Viewer access, then supply that viewing URL. The website's direct MP4 URL is not an accepted form host.

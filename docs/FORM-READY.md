@@ -12,7 +12,7 @@ Repository: **https://github.com/0xileri/chogchemy** — verify judge access whe
 
 Demo video: **Pending upload of the updated MP4 to unlisted YouTube or Google Drive.** Download it from https://chogchemy.up.railway.app/demo-video.mp4. Do not paste the direct MP4 into the competition's video field.
 
-Contact email: **Team must provide it.**
+Contact email: **Provided privately in the organizer-only submission draft; keep it out of the public repository.**
 
 Team: **Chogchemy** — builder X/Discord **@0xileri**, artist X **@theejhay01**. Confirm the artist's registered teammate profile and Discord if required.
 
