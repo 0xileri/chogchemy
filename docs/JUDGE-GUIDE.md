@@ -4,7 +4,7 @@
 
 1. Open https://chogchemy.up.railway.app. Browse the 100 templates, search by name and filter by category; this makes no image-generation request.
 2. Connect a Chog holder wallet and choose the NFT to star in the scene. Pick a template and optionally describe the character to replace.
-3. Add optional top/bottom captions. These appear in separate caption bars, not the original template's text boxes. Click **Create my Chog meme** once. One dispatched request uses one of the shared drawing allowance.
+3. Add optional top/bottom captions. Every template has two Chog-themed caption ideas: click **Suggest captions**, press Tab in an empty caption field on desktop, or Space in an empty caption field on a phone. Phone keyboards without that event can use the visible button. Tab keeps normal focus navigation. The button cycles unchanged suggested text; manually edited text stays intact. Choosing a different template clears only old automatic text. Suggestions are local and do not use the drawing allowance. Captions appear in separate bars, not the original template's text boxes. Click **Create my Chog meme** once. One dispatched request uses one of the shared drawing allowance.
 4. Check progress or reopen the request from **My memes**. Cancelling is possible only during preparation; a dispatched provider failure is not automatically repeated.
 5. Open the finished public meme page, download the PNG, and try **Enlarge artwork**, **Zoom in**, **Zoom out**, Escape, and keyboard focus return. The original NFT stays in its wallet.
 6. Ask the artist to check that the actual NFT traits remain recognizable and the template's joke/pose still works. Real meme output quality has not been established by synthetic tests.

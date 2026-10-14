@@ -1,7 +1,9 @@
 import { api, getWalletAddress } from './wallet.js';
 import { shareOrCopy } from './share.js';
+import { attachCaptionSuggestions } from './caption-suggestions.js';
 const $ = id => document.getElementById(id);
 let templates = [], selected = null, tokenId = '', current = null, busy = false, allowance = null, nonce = null, revision = 0, poll = null, shown = 24;
+const captionIdeas = attachCaptionSuggestions({ top: $('meme-top-caption'), bottom: $('meme-bottom-caption'), button: $('meme-suggest-captions'), status: $('meme-caption-suggestion-status'), onChange: () => { nonce = null; } });
 const stateLabel = record => ({ preparing: 'Preparing your Chog meme', generating: 'Drawing your Chog meme', generated: 'Your Chog meme is saved', approved: 'Meme preparation needs another try', generation_failed: 'The meme was not saved', cancelled: 'Preparation cancelled', invalidated: 'Chog ownership changed', expired: 'Meme request expired' })[record.state] || 'Meme in progress';
 function newNonce() { return Array.from(crypto.getRandomValues(new Uint8Array(16)), n => n.toString(16).padStart(2, '0')).join(''); }
 function error(text = '') { $('meme-create-error').textContent = text; $('meme-create-error').hidden = !text; }
@@ -16,6 +18,7 @@ function controls() {
   $('meme-retry').hidden = !current?.canGenerate || !address; $('meme-retry').disabled = busy || atLimit;
   $('meme-cancel').hidden = !current?.canCancel || !address; $('meme-cancel').disabled = busy;
   for (const id of ['meme-role', 'meme-top-caption', 'meme-bottom-caption']) $(id).disabled = busy || pending;
+  $('meme-suggest-captions').disabled = busy || pending || !selected?.captionSuggestions?.length;
   document.querySelectorAll('.meme-template-card button').forEach(b => { b.disabled = busy || pending; });
 }
 async function usage() {
@@ -26,6 +29,7 @@ async function usage() {
 function choose(template) {
   if (busy || ['preparing', 'generating'].includes(current?.state)) return;
   selected = template; nonce = null; error();
+  captionIdeas.select(template);
   $('meme-selected-name').textContent = template.name; $('meme-selected-template').src = template.imageUrl; $('meme-selected-template').alt = `${template.name} — original template`; $('meme-selected-template').hidden = false;
   $('meme-template-source').href = template.sourceUrl; $('meme-template-source').hidden = false;
   document.querySelectorAll('.meme-template-card').forEach(card => {

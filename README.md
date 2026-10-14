@@ -119,4 +119,6 @@ Memes reuse the existing SQLite record/image storage with an explicit `kind: mem
 
 ## Website motion
 
+Caption ideas are in `assets/memes/caption-ideas.json`: two original top/bottom pairs for each of the 100 catalog templates, validated against the server's 80-character limits. The catalog API includes those ideas. The client uses `caption-suggestions.js` to fill empty fields with Tab or Space and cycle unchanged automatic text using **Suggest captions**. Mobile `beforeinput` without `keydown` is supported; keyboard composition, ordinary spaces in existing text, Shift+Tab and modified keys stay native. Tab still advances focus. Changing templates resets only old automatic captions, while custom captions stay intact. Suggestions need no wallet or paid request; editing them invalidates the draft request nonce.
+
 Vanilla browser APIs add one-time scroll reveals, small scroll/hover zoom, button feedback and a scroll progress line. The artwork dialog supports zoom in/out, native Escape dismissal, focus return and small screens. Reduced-motion preferences disable cosmetic motion, including changes made while the page is open. Content remains visible if animations or scripts are unavailable; scrolling uses the browser normally.

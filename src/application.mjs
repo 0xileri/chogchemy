@@ -15,6 +15,7 @@ const staticFiles = {
   '/wallet.js': ['wallet.js', 'text/javascript'], '/fusion.js': ['fusion.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
   '/character.js': ['character.js', 'text/javascript'], '/share.js': ['share.js', 'text/javascript'],
   '/motion.js': ['motion.js', 'text/javascript'], '/motion.css': ['motion.css', 'text/css'],
+  '/caption-suggestions.js': ['caption-suggestions.js', 'text/javascript'],
   '/memes.js': ['memes.js', 'text/javascript'], '/memes.css': ['memes.css', 'text/css'], '/families': ['families.html', 'text/html'], '/families/': ['families.html', 'text/html'],
   '/brand/chogchemy-logo-v1.png': ['../assets/brand/chogchemy-logo-v1.png', 'image/png'],
   '/brand/chogchemy-icon-v1.png': ['../assets/brand/chogchemy-icon-v1.png', 'image/png'],

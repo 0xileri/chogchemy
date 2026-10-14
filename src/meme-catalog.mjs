@@ -4,9 +4,13 @@ import { digest, imageMime } from './art-direction.mjs';
 import { limitedBytes } from './reference-assets.mjs';
 
 export const memeCatalog = JSON.parse(readFileSync(new URL('../assets/memes/catalog.json', import.meta.url), 'utf8'));
+const captionIdeas = JSON.parse(readFileSync(new URL('../assets/memes/caption-ideas.json', import.meta.url), 'utf8'));
 if (memeCatalog.templates.length !== 100 || new Set(memeCatalog.templates.map(t => t.id)).size !== 100) throw new Error('Invalid meme catalog.');
 for (const template of memeCatalog.templates) {
   if (!/^\d+$/.test(template.id) || !/^https:\/\/i\.imgflip\.com\/[a-z0-9]+\.(jpg|png)$/.test(template.imageUrl)) throw new Error('Invalid catalog image.');
+  const ideas = captionIdeas[template.id];
+  if (!Array.isArray(ideas) || ideas.length < 2 || ideas.some(idea => !idea || ['top', 'bottom'].some(key => typeof idea[key] !== 'string' || !idea[key].trim() || idea[key].length > 80 || /[\u0000-\u001f\u007f]/.test(idea[key])))) throw new Error('Invalid caption suggestions.');
+  template.captionSuggestions = ideas;
 }
 export const memeTemplate = id => memeCatalog.templates.find(t => t.id === id);
 export async function loadMemeTemplate(template, fetcher = fetch) {
