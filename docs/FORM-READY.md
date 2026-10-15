@@ -8,9 +8,9 @@ Banner: **https://chogchemy.up.railway.app/brand/chogchemy-banner-v2.png**
 
 Tech stack: **HTML/CSS/JavaScript, Node.js, SQLite, Railway, viem, Sharp/Pango, Orbio image API.**
 
-Repository: **https://github.com/0xileri/chogchemy** — verify judge access when the build is finished.
+Repository: **https://github.com/0xileri/chogchemy** — public source for judge review.
 
-Demo video: **Pending upload of the updated MP4 to unlisted YouTube or Google Drive.** Download it from https://chogchemy.up.railway.app/demo-video.mp4. Do not paste the direct MP4 into the competition's video field.
+Demo video: **https://youtu.be/-en7YSptKQ0** — YouTube page checked: Unlisted, 1:43. Paste this viewing URL into the competition's video field.
 
 Contact email: **Provided privately in the organizer-only submission draft; keep it out of the public repository.**
 

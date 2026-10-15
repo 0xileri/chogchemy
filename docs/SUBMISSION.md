@@ -16,13 +16,13 @@ Chog passport: https://chogchemy.up.railway.app/chogs/1786
 
 Weekly prompt: https://chogchemy.up.railway.app/community
 
-Repository: https://github.com/0xileri/chogchemy — private during building. @0xileri plans to make it public when finished; verify judge access before submitting.
+Repository: https://github.com/0xileri/chogchemy — public source for judge review.
 
 Demo preview: https://chogchemy.up.railway.app/watch
 
 Direct download: https://chogchemy.up.railway.app/demo-video.mp4
 
-**Final demo submission link:** upload the updated MP4 to unlisted YouTube or Google Drive with Anyone with the link / Viewer access. The official submission form accepts those hosts, not the direct website MP4 link. An accepted upload URL is still pending.
+**Final demo submission link:** https://youtu.be/-en7YSptKQ0 — YouTube page checked: Unlisted, 1:43. Use this viewing URL in the official submission form.
 
 ## One-line pitch
 
@@ -81,9 +81,9 @@ Independent holder feedback, artist approval of the curated set, real-device wal
 
 ## Final checks requiring the team
 
-1. Upload the current MP4 to an accepted host and verify its public viewing link.
+1. Keep the submitted YouTube demo Unlisted and its viewing link accessible.
 2. Confirm artist-reference dates, teammate registration/handles and contact email.
-3. Make the repository accessible to judges when the build is finished, as planned.
+3. Keep the public repository accessible to judges throughout review.
 4. Gather real holder/artist feedback; report any missing evidence honestly.
 5. Review the final form and submit from the existing applicant account.
 
